@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "buildCommand": "prisma generate --no-engine && next build",
+  "devCommand": "prisma generate --no-engine && next dev",
+  "installCommand": "npm install",
+  "framework": "nextjs"
+}
+
