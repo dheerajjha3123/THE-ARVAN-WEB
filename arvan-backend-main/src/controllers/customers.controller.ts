@@ -254,7 +254,7 @@ const getOtpByNumber = async (
   await sendOtp(getOtp, parsedData.data.mobile_no);
 
   // Set token expiry longer for forgetpassword type
-  const tokenExpiry = parsedData.data.type === "forgetpassword" ? "1h" : "15m";
+  const tokenExpiry = parsedData.data.type === "forgetpassword" ? 3600 : 900;
 
   const jwt = await generateToken({ userphone: parsedData.data.mobile_no, type: parsedData.data.type }, tokenExpiry);
   await prisma.otp.create({
