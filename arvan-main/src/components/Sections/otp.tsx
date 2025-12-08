@@ -45,6 +45,7 @@ const handleResendOtp = async() => {
         }
         toast.success("OTP verified successfully");
         if(data?.jwt){
+          localStorage.setItem('authToken', data.jwt);
           router.push(`/signin`);
         }
         else{
