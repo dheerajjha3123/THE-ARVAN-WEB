@@ -1,28 +1,11 @@
-# TODO: Fix Unauthorized Error After Deployment
+# TODO: Fix Authentication Error in Production
 
-## Issue
-- Backend deployed on Render, Frontend on Vercel
-- Getting "Unauthorized: No valid token or user found" errors
-- authenticateJWT function failing to verify tokens
+## Completed Tasks
+- [x] Analyze the authentication error: "Unauthorized: No valid token or user found" occurring on GET /backend/api/customers in Vercel and Render.
+- [x] Identify root cause: Cross-domain cookie sharing issue between Vercel (frontend) and Render (backend).
+- [x] Modify `arvan-main/src/auth.config.ts` to configure NextAuth cookies with `sameSite: 'none'` and `secure: true` to allow cross-domain requests.
 
-## Root Cause
-- Frontend middleware sends NextAuth session token in Authorization header
-- Backend was trying to decode it as JWT, but it's actually a session token that needs database lookup
-- JWT secrets (AUTH_SECRET vs NEXTAUTH_SECRET) need to match between frontend and backend
-
-## Fix Applied
-- [x] Modified authenticateJWT in `arvan-backend-main/src/middleware/globalerrorhandler.ts`
-  - Now first looks up session token in database to get user
-  - Falls back to JWT decoding if session lookup fails
-  - Falls back to next-auth getToken() for compatibility
-  - Falls back to user ID parsing for legacy support
-
-## Next Steps
-- [ ] Ensure NEXTAUTH_SECRET and AUTH_SECRET are the same in both deployments
-- [ ] Redeploy backend to Render with the updated code
-- [ ] Test authentication flow after redeployment
-- [ ] Check if the Unauthorized errors are resolved
-
-## Verification
-- Redeploy backend to Render with the updated code
-- Check if the Unauthorized errors are resolved
+## Pending Tasks
+- [ ] Deploy the updated frontend code to Vercel.
+- [ ] Test the authentication on the production environment to ensure the error is resolved.
+- [ ] If issues persist, verify that NEXTAUTH_SECRET and AUTH_SECRET are consistent between frontend and backend environments.
