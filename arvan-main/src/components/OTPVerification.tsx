@@ -66,6 +66,10 @@ const OTPVerification = ({ mobileNumber }: { mobileNumber: string }) => {
       if (res.status !== 200) {
         toast.error(res.data.message);
       }
+      // Store the JWT token in localStorage
+      if (res.data.jwt) {
+        localStorage.setItem('authToken', res.data.jwt);
+      }
       toast.success("OTP verified successfully!");
       router.push("/signin");
       setIsResendDisabled(false);
