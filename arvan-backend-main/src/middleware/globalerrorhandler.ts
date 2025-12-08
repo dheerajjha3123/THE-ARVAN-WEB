@@ -119,25 +119,43 @@ export const authenticateJWT: RequestHandler = async (
     }
 
     let userRecord = null;
-    let token = null;
+    let decodedToken = null;
 
-    // Try to get token from next-auth JWT
-    token = await getToken({ req: req as any, secret: ENV.AUTH_SECRET });
-
-    if (token) {
-      userRecord = await prisma.user.findUnique({
-        where: { id: token.id as string },
-      });
-    } else {
-      // Fallback: check if Authorization header has user ID
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const userId = authHeader.substring(7); // Remove 'Bearer '
-        if (userId) {
+    // First, try to decode JWT from Authorization header
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const jwtToken = authHeader.substring(7); // Remove 'Bearer '
+      try {
+        decodedToken = jwt.verify(jwtToken, ENV.AUTH_SECRET) as any;
+        if (decodedToken && decodedToken.id) {
           userRecord = await prisma.user.findUnique({
-            where: { id: userId },
+            where: { id: decodedToken.id },
           });
         }
+      } catch (jwtError) {
+        console.error("JWT verification failed:", jwtError);
+        // Continue to fallback
+      }
+    }
+
+    // Fallback: Try to get token from next-auth JWT (for compatibility)
+    if (!userRecord) {
+      const token = await getToken({ req: req as any, secret: ENV.AUTH_SECRET });
+      if (token) {
+        decodedToken = token;
+        userRecord = await prisma.user.findUnique({
+          where: { id: token.id as string },
+        });
+      }
+    }
+
+    // Final fallback: check if Authorization header has user ID (legacy)
+    if (!userRecord && authHeader && authHeader.startsWith('Bearer ')) {
+      const userId = authHeader.substring(7); // Remove 'Bearer '
+      if (userId && userId.length < 50) { // Assuming userId is short, JWT is long
+        userRecord = await prisma.user.findUnique({
+          where: { id: userId },
+        });
       }
     }
 
@@ -148,8 +166,8 @@ export const authenticateJWT: RequestHandler = async (
     req.user = userRecord;
 
     // Override role with token role if available (for admin designation via ADMIN_NUMBERS)
-    if (token && token.role) {
-      req.user.role = token.role;
+    if (decodedToken && decodedToken.role) {
+      req.user.role = decodedToken.role;
     }
 
     next();
