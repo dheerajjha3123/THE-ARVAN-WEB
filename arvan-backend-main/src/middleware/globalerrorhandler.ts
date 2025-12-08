@@ -121,9 +121,28 @@ export const authenticateJWT: RequestHandler = async (
     let userRecord = null;
     let decodedToken = null;
 
-    // First, try to decode JWT from Authorization header
+    // First, try to get session from Authorization header (NextAuth session token)
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
+      const sessionToken = authHeader.substring(7); // Remove 'Bearer '
+      try {
+        // Look up the session in the database
+        const session = await prisma.session.findUnique({
+          where: { sessionToken },
+          include: { user: true },
+        });
+        if (session && session.user && new Date(session.expires) > new Date()) {
+          userRecord = session.user;
+          decodedToken = { id: session.user.id, role: session.user.role };
+        }
+      } catch (sessionError) {
+        console.error("Session lookup failed:", sessionError);
+        // Continue to fallback
+      }
+    }
+
+    // Fallback: Try to decode JWT from Authorization header (if it's a JWT)
+    if (!userRecord && authHeader && authHeader.startsWith('Bearer ')) {
       const jwtToken = authHeader.substring(7); // Remove 'Bearer '
       try {
         decodedToken = jwt.verify(jwtToken, ENV.AUTH_SECRET) as any;
