@@ -23,7 +23,6 @@ function verifyToken(token: string) {
 export default {
   cookies: {
     sessionToken: {
-      name: `next-auth.session-token`,
       options: {
         httpOnly: true,
         sameSite: 'none',

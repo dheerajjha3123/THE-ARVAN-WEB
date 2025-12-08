@@ -121,23 +121,41 @@ export const authenticateJWT: RequestHandler = async (
     let userRecord = null;
     let decodedToken = null;
 
-    // First, try to get session from Authorization header (NextAuth session token)
+    // First, try to get user from Authorization header (JWT token)
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      const sessionToken = authHeader.substring(7); // Remove 'Bearer '
+      const jwtToken = authHeader.substring(7);
       try {
-        // Look up the session in the database
-        const session = await prisma.session.findUnique({
-          where: { sessionToken },
-          include: { user: true },
-        });
-        if (session && session.user && new Date(session.expires) > new Date()) {
-          userRecord = session.user;
-          decodedToken = { id: session.user.id, role: session.user.role };
+        decodedToken = jwt.verify(jwtToken, ENV.AUTH_SECRET) as any;
+        if (decodedToken && decodedToken.id && decodedToken.type === "login") {
+          userRecord = await prisma.user.findUnique({
+            where: { id: decodedToken.id },
+          });
         }
-      } catch (sessionError) {
-        console.error("Session lookup failed:", sessionError);
+      } catch (jwtError) {
+        console.error("JWT verification failed:", jwtError);
         // Continue to fallback
+      }
+    }
+
+    if (!userRecord) {
+      // Fallback: try to get session from Authorization header (NextAuth session token)
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const sessionToken = authHeader.substring(7); // Remove 'Bearer '
+        try {
+          // Look up the session in the database
+          const session = await prisma.session.findUnique({
+            where: { sessionToken },
+            include: { user: true },
+          });
+          if (session && session.user && new Date(session.expires) > new Date()) {
+            userRecord = session.user;
+            decodedToken = { id: session.user.id, role: session.user.role };
+          }
+        } catch (sessionError) {
+          console.error("Session lookup failed:", sessionError);
+          // Continue to fallback
+        }
       }
     }
 
