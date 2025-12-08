@@ -318,9 +318,9 @@ const getOtpByJwt = async (
     .json({ success: true, message: "OTP sent successfully", jwt });
 };
 
-function generateToken(payload: object, expiresIn: string | number = "15m"): string {
+function generateToken(payload: object, expiresIn: string | number = 900): string {
   const options: SignOptions = {
-    expiresIn: expiresIn as any, // Allows custom expiry time with default 15 minutes
+    expiresIn: expiresIn as any, // Allows custom expiry time with default 15 minutes (900 seconds)
     // other options
   };
 
