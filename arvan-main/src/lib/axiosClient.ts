@@ -7,10 +7,18 @@ export const apiClient = axios.create({
 
 // Add request interceptor to include Authorization header
 apiClient.interceptors.request.use((config) => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    try {
+      const decoded = JSON.parse(atob(token.split('.')[1]));
+      if (decoded.type === 'login') {
         config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      // Invalid token, remove it
+      localStorage.removeItem('authToken');
     }
+  }
     return config;
 }, (error) => {
     return Promise.reject(error);

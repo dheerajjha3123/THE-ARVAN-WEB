@@ -10,6 +10,8 @@
 ## Pending Tasks
 - [x] In the frontend, after OTP verification API call, store the returned JWT in localStorage as 'authToken'.
 - [x] On logout, remove the 'authToken' from localStorage.
+- [x] Updated axiosClient to only send 'login' type JWTs in Authorization header.
+- [x] Updated OTPVerification to use NextAuth signIn for signup instead of storing JWT.
 - [ ] Deploy the updated frontend and backend code to Vercel and Render.
 - [ ] Test the authentication on the production environment to ensure the error is resolved.
 - [ ] Ensure NEXTAUTH_SECRET and AUTH_SECRET are identical in frontend and backend environments.
