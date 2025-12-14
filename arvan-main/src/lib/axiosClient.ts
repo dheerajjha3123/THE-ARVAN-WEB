@@ -13,9 +13,6 @@ apiClient.interceptors.request.use((config) => {
       const decoded = JSON.parse(atob(token.split('.')[1]));
       if (decoded.type === 'login') {
         config.headers.Authorization = `Bearer ${token}`;
-      } else {
-        // Remove invalid token types
-        localStorage.removeItem('authToken');
       }
     } catch (error) {
       // Invalid token, remove it
