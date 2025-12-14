@@ -10,6 +10,11 @@ import axios from "axios";
 import util from "util";
 import jwt from "jsonwebtoken";
 
+const isValidJWT = (token: string): boolean => {
+  // JWT should have exactly 2 dots and be base64url encoded
+  const parts = token.split('.');
+  return parts.length === 3 && parts.every(part => /^[A-Za-z0-9_-]*$/.test(part));
+};
 
 const cleanMessage = (message: string) => message.replace(/(\r\n|\r|\n)/g, " ");
 export const globalErrorHandler = (
@@ -125,16 +130,18 @@ export const authenticateJWT: RequestHandler = async (
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const jwtToken = authHeader.substring(7);
-      try {
-        decodedToken = jwt.verify(jwtToken, ENV.AUTH_SECRET, { clockTolerance: 60 * 60 * 24 * 365 * 10 }) as any; // 10 years tolerance for clock skew
-        if (decodedToken && decodedToken.id && decodedToken.type === "login") {
-          userRecord = await prisma.user.findUnique({
-            where: { id: decodedToken.id },
-          });
+      if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
+        try {
+          decodedToken = jwt.verify(jwtToken, ENV.AUTH_SECRET, { clockTolerance: 60 * 60 * 24 * 365 * 10 }) as any; // 10 years tolerance for clock skew
+          if (decodedToken && decodedToken.id && decodedToken.type === "login") {
+            userRecord = await prisma.user.findUnique({
+              where: { id: decodedToken.id },
+            });
+          }
+        } catch (jwtError) {
+          console.error("JWT verification failed:", jwtError);
+          // Continue to fallback
         }
-      } catch (jwtError) {
-        console.error("JWT verification failed:", jwtError);
-        // Continue to fallback
       }
     }
 
@@ -162,16 +169,18 @@ export const authenticateJWT: RequestHandler = async (
     // Fallback: Try to decode JWT from Authorization header (if it's a JWT)
     if (!userRecord && authHeader && authHeader.startsWith('Bearer ')) {
       const jwtToken = authHeader.substring(7); // Remove 'Bearer '
-      try {
-        decodedToken = jwt.verify(jwtToken, ENV.AUTH_SECRET, { clockTolerance: 60 * 60 * 24 * 365 * 10 }) as any; // 10 years tolerance for clock skew
-        if (decodedToken && decodedToken.id) {
-          userRecord = await prisma.user.findUnique({
-            where: { id: decodedToken.id },
-          });
+      if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
+        try {
+          decodedToken = jwt.verify(jwtToken, ENV.AUTH_SECRET, { clockTolerance: 60 * 60 * 24 * 365 * 10 }) as any; // 10 years tolerance for clock skew
+          if (decodedToken && decodedToken.id) {
+            userRecord = await prisma.user.findUnique({
+              where: { id: decodedToken.id },
+            });
+          }
+        } catch (jwtError) {
+          console.error("JWT verification failed:", jwtError);
+          // Continue to fallback
         }
-      } catch (jwtError) {
-        console.error("JWT verification failed:", jwtError);
-        // Continue to fallback
       }
     }
 
