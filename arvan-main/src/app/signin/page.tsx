@@ -168,6 +168,8 @@ const Signin = () => {
       if (result?.error) {
         toast.error("Login failed");
       } else {
+        // Store JWT in localStorage for API calls
+        localStorage.setItem('authToken', loginJwt);
         setAllowAutoRedirect(false);
         toast.success("Login successful");
         setTimeout(() => {

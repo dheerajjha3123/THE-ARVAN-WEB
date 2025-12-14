@@ -6,6 +6,7 @@ import { apiClient } from "@/lib/axiosClient";
 import { toast } from "react-hot-toast";
 import { FaWhatsapp } from "react-icons/fa";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 const OTPVerification = ({ mobileNumber }: { mobileNumber: string }) => {
   const [otp, setOtp] = useState<string[]>(Array(7).fill(""));
@@ -65,13 +66,21 @@ const OTPVerification = ({ mobileNumber }: { mobileNumber: string }) => {
       });
       if (res.status !== 200) {
         toast.error(res.data.message);
+        return;
       }
-      // Store the JWT token in localStorage
+      // Use NextAuth signIn for signup
       if (res.data.jwt) {
-        localStorage.setItem('authToken', res.data.jwt);
+        const result = await signIn("credentials", {
+          token: res.data.jwt,
+          redirect: false,
+        });
+        if (result?.error) {
+          toast.error("Signup failed");
+        } else {
+          toast.success("OTP verified successfully!");
+          router.push("/");
+        }
       }
-      toast.success("OTP verified successfully!");
-      router.push("/signin");
       setIsResendDisabled(false);
     } catch (error) {
       console.error("Error verifying OTP:", error);
