@@ -107,7 +107,10 @@ export function Sidebar() {
                 collapsed={isCollapsed}
               />
               <div
-                onClick={() => signOut({redirectTo:"/"})}
+                onClick={() => {
+                  localStorage.removeItem('authToken');
+                  signOut({redirectTo:"/"});
+                }}
                 className={`flex cursor-pointer items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all text-gray-700 hover:bg-gray-100 ${
                   isCollapsed ? "justify-center" : ""
                 }`}

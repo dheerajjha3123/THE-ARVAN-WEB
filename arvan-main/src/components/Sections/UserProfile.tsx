@@ -222,7 +222,10 @@ export default function ProfilePage({ user }: { user: Session["user"] }) {
         {/* Logout Button */}
         <div className="mt-6 self-center sm:self-end w-full flex justify-center sm:justify-end">
           <button
-            onClick={() => signOut()}
+            onClick={() => {
+              localStorage.removeItem('authToken');
+              signOut();
+            }}
             className="flex items-center space-x-2 bg-[#B22B2B] text-white px-6 py-2 rounded-sm hover:bg-red-500/20 transition">
             <span>Log Out</span>
             <LogOut className="w-4 h-4" />
