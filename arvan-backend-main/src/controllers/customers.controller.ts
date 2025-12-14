@@ -404,9 +404,39 @@ const verfy_otp = async (req: Request, res: Response, next: NextFunction) => {
       },
     });
 
+    // Get or create user to get the ID
+    let user = await prisma.user.findUnique({
+      where: { mobile_no: findOtp.userphone },
+      select: { id: true, mobile_no: true, role: true },
+    });
+
+    if (!user) {
+      // Create user if doesn't exist
+      user = await prisma.user.create({
+        data: {
+          mobile_no: findOtp.userphone,
+          isPhoneNoVerified: true,
+          phoneNoVerified: new Date(),
+        },
+        select: { id: true, mobile_no: true, role: true },
+      });
+    } else {
+      // Update existing user
+      user = await prisma.user.update({
+        where: { mobile_no: findOtp.userphone },
+        data: {
+          isPhoneNoVerified: true,
+          phoneNoVerified: new Date(),
+        },
+        select: { id: true, mobile_no: true, role: true },
+      });
+    }
+
     // Generate login token for automatic sign-in after signup verification
     const loginToken = generateToken({
-      mobile_no: findOtp.userphone,
+      id: user.id,
+      mobile_no: user.mobile_no,
+      role: user.role,
       type: "login",
     });
 

@@ -13,6 +13,7 @@ const OTPVerification = ({ mobileNumber }: { mobileNumber: string }) => {
   const [isResendDisabled, setIsResendDisabled] = useState(false);
   const [timer, setTimer] = useState(0);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [otpJwt, setOtpJwt] = useState<string | null>(null);
   const router = useRouter();
   
 
@@ -24,14 +25,20 @@ const OTPVerification = ({ mobileNumber }: { mobileNumber: string }) => {
   useEffect(() => {
     const sendOTP = async () => {
       try {
-        const res = await apiClient.get("/api/customers/otp?mobile_no=" + mobileNumber);
+        const res = await apiClient.post("/api/customers/otp", {
+          mobile_no: mobileNumber,
+          type: "verify",
+        });
         if(res.status === 202) {
           toast.error(res.data.message);
           return;
         }
+        if (res.data.jwt) {
+          setOtpJwt(res.data.jwt);
+        }
         toast.success("OTP sent to your WhatsApp");
         startResendTimer();
-      } catch (error) {  
+      } catch (error) {
         console.error("Error sending OTP:", error);
         toast.error("Failed to send OTP");
       }
@@ -62,6 +69,7 @@ const OTPVerification = ({ mobileNumber }: { mobileNumber: string }) => {
       const res = await apiClient.post("/api/customers/verify-otp", {
         mobileNumber,
         otp: otp.join(""),
+        jwt: otpJwt,
         type: "verify",
       });
       if (res.status !== 200) {
@@ -70,6 +78,9 @@ const OTPVerification = ({ mobileNumber }: { mobileNumber: string }) => {
       }
       // Use NextAuth signIn for signup
       if (res.data.jwt) {
+        // Store the login JWT in localStorage for API calls
+        localStorage.setItem('authToken', res.data.jwt);
+
         const result = await signIn("credentials", {
           token: res.data.jwt,
           redirect: false,

@@ -1,17 +1,20 @@
-# TODO: Fix Authentication Error in Production
+# Deployment Fixes for Frontend-Backend Connection
 
-## Completed Tasks
-- [x] Analyze the authentication error: "Unauthorized: No valid token or user found" occurring on GET /backend/api/customers in Vercel and Render.
-- [x] Identify root cause: Cross-domain cookie sharing issue between Vercel (frontend) and Render (backend).
-- [x] Modify `arvan-main/src/auth.config.ts` to configure NextAuth cookies with `sameSite: 'none'` and `secure: true` to allow cross-domain requests.
-- [x] Modify `arvan-backend-main/src/middleware/globalerrorhandler.ts` to check for Authorization header with JWT token for authentication.
-- [x] Modify `arvan-main/src/lib/axiosClient.ts` to include Authorization header from localStorage.
+## Backend Changes (arvan-backend-main)
+- [x] Added clockTolerance to JWT verification in authenticateJWT middleware
+- [x] Fixed verify OTP flow to generate proper login token with user ID
 
-## Pending Tasks
-- [x] In the frontend, after OTP verification API call, store the returned JWT in localStorage as 'authToken'.
-- [x] On logout, remove the 'authToken' from localStorage.
-- [x] Updated axiosClient to only send 'login' type JWTs in Authorization header.
-- [x] Updated OTPVerification to use NextAuth signIn for signup instead of storing JWT.
-- [ ] Deploy the updated frontend and backend code to Vercel and Render.
-- [ ] Test the authentication on the production environment to ensure the error is resolved.
-- [ ] Ensure NEXTAUTH_SECRET and AUTH_SECRET are identical in frontend and backend environments.
+## Frontend Changes (arvan-main)
+- [x] Added localStorage storage of login JWT in OTPVerification component
+
+## Deployment Steps
+- [ ] Deploy backend changes to Render
+- [ ] Deploy frontend changes to Vercel
+- [ ] Test API calls after deployment
+- [ ] Verify authentication works properly
+
+## Testing Checklist
+- [ ] OTP verification for signup
+- [ ] OTP verification for login
+- [ ] API calls to protected endpoints (customers/address)
+- [ ] JWT tokens have correct type and payload
