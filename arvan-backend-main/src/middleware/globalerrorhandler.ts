@@ -133,6 +133,10 @@ export const authenticateJWT: RequestHandler = async (
       if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
         try {
           decodedToken = jwt.verify(jwtToken, ENV.AUTH_SECRET, { clockTolerance: 60 * 60 * 24 * 365 * 10 }) as any; // 10 years tolerance for clock skew
+          if (decodedToken && decodedToken.type === "verify") {
+            // Skip authentication for verify type JWTs
+            return next();
+          }
           if (decodedToken && decodedToken.id && decodedToken.type === "login") {
             userRecord = await prisma.user.findUnique({
               where: { id: decodedToken.id },
