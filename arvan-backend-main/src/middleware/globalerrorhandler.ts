@@ -115,8 +115,23 @@ declare global {
 function extractBearerToken(headerValue?: string | string[] | null): string | null {
   if (!headerValue) return null;
   const hv = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+  if (!hv || typeof hv !== "string") return null;
+
+  // Split the header on whitespace and pick the first token-looking substring (handles "token otp" or "Bearer token otp")
+  const parts = hv.split(/\s+/).filter(Boolean);
+  for (const p of parts) {
+    // Accept standard JWT pattern (three dot-separated parts) or match using isValidJWT
+    if (p && p.includes('.') && isValidJWT(p)) {
+      return p.trim();
+    }
+  }
+
+  // As a final fallback, match "Bearer <rest>" case-insensitively and return the rest (could be a token with spaces)
   const m = hv.match(/^\s*Bearer\s+(.+)$/i);
-  return m ? m[1].trim() : null;
+  if (m) return m[1].trim();
+
+  // Nothing recognizable
+  return null;
 }
 
 export const authenticateJWT: RequestHandler = async (
@@ -125,8 +140,19 @@ export const authenticateJWT: RequestHandler = async (
   next: NextFunction
 ): Promise<any> => {
   try {
-    // Allow skipping auth check on OTP-related endpoints
-    if (req.path.includes('/otp') || req.path.includes('/verify-otp') || req.path.includes('/reset-password') || req.path.includes('/resend-otp')) {
+    // Normalize path check to lowercase for robust OTP-route skipping
+    const pathLower = (req.path || "").toLowerCase();
+    // Match common OTP/get endpoints (case-insensitive)
+    if (
+      pathLower.includes('/otp') ||
+      pathLower.includes('getotp') ||
+      pathLower.includes('get-otp') ||
+      pathLower.includes('verify-otp') ||
+      pathLower.includes('verifyotp') ||
+      pathLower.includes('/reset-password') ||
+      pathLower.includes('resend-otp') ||
+      pathLower.includes('resendotp')
+    ) {
       return next();
     }
 
@@ -250,16 +276,16 @@ export const authenticateJWT: RequestHandler = async (
   } catch (error: unknown) {
     console.error("Failed to authenticate", error);
     // Instead of throwing an error, just skip authentication for OTP endpoints
+    const pathLower = (req.path || "").toLowerCase();
     if (
-      typeof req !== "undefined" &&
-      'path' in req &&
-      typeof req.path === 'string' &&
-      (
-        (req.path as string).includes('/otp') ||
-        (req.path as string).includes('/verify-otp') ||
-        (req.path as string).includes('/reset-password') ||
-        (req.path as string).includes('/resend-otp')
-      )
+      pathLower.includes('/otp') ||
+      pathLower.includes('getotp') ||
+      pathLower.includes('get-otp') ||
+      pathLower.includes('verify-otp') ||
+      pathLower.includes('verifyotp') ||
+      pathLower.includes('/reset-password') ||
+      pathLower.includes('resend-otp') ||
+      pathLower.includes('resendotp')
     ) {
       return next();
     }
