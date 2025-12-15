@@ -6,19 +6,20 @@ Fixed the root cause of the "Failed to authenticate RouteError: Unauthorized: No
 ## Changes Made
 - [x] Simplified the `verfy_otp` function in `customers.controller.ts` by replacing redundant user creation/update logic with a single Prisma `upsert` operation to ensure atomic user creation or update.
 - [x] Removed `authenticateJWT` middleware from the `/verify-otp` route in `customers.routes.ts` to prevent unnecessary authentication checks during OTP verification.
-- [x] Modified `authenticateJWT` in `globalerrorhandler.ts` to skip authentication for JWTs with type "verify", allowing frontend to use the "verify" JWT from getOtp for authenticated requests before verify-otp completes.
+- [x] Modified `authenticateJWT` in `globalerrorhandler.ts` to skip authentication for JWTs with type "verify", and accept any JWT with an `id` field (including NextAuth JWTs) for authentication.
 
 ## Root Cause
 The error was caused by:
 1. Redundant and potentially race-condition-prone user creation logic in `verfy_otp`.
 2. Unnecessary `authenticateJWT` middleware on the `/verify-otp` route, which could fail for new users before the user is created.
 3. Frontend sending "verify" type JWTs (from getOtp) to authenticated routes, which authenticateJWT couldn't validate since it expects "login" type JWTs with user IDs.
+4. NextAuth JWTs (used after OTP verification) lack a "type" field, causing authentication failures despite having valid user IDs.
 
 ## Testing
 - Deploy the changes to production and test OTP login for new unregistered numbers.
 - Verify that the JWT is properly generated and stored after successful OTP verification.
 - Ensure subsequent authenticated requests (e.g., getCustomer) work correctly with the new login token.
-- Confirm that "verify" JWTs are accepted for authentication during the OTP flow.
+- Confirm that both "verify" JWTs and NextAuth JWTs are accepted for authentication during the OTP flow.
 
 ## 🔄 In Progress
 - [ ] Testing Infrastructure
