@@ -22,7 +22,7 @@ router.get("/address", authenticateJWT,customersController.getAddress);
 router.post("/otp" ,customersController.getOtpByNumber);
 
 router.post(`/resend-otp` ,customersController.getOtpByJwt);
-router.post("/verify-otp", authenticateJWT, customersController.verfy_otp);
+router.post("/verify-otp", customersController.verfy_otp);
 
 router.post("/makeAdmin", authenticateJWT,isAdmin,customersController.makeAdmin);
 router.post("/reset-password", authenticateJWT, customersController.forgotPassword);

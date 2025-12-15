@@ -368,131 +368,39 @@ const verfy_otp = async (req: Request, res: Response, next: NextFunction) => {
     throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Invalid OTP");
   }
 
-  if (verifyJwt.type === "verify") {
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: {
-        mobile_no: findOtp.userphone,
-      },
-    });
+  // Upsert user to ensure creation or update
+  const user = await prisma.user.upsert({
+    where: { mobile_no: findOtp.userphone },
+    update: {
+      isPhoneNoVerified: true,
+      phoneNoVerified: new Date(),
+    },
+    create: {
+      mobile_no: findOtp.userphone,
+      isPhoneNoVerified: true,
+      phoneNoVerified: new Date(),
+    },
+  });
 
-    if (!existingUser) {
-      // Create user if doesn't exist (for signup verification)
-      await prisma.user.create({
-        data: {
-          mobile_no: findOtp.userphone,
-          isPhoneNoVerified: true,
-          phoneNoVerified: new Date(),
-        },
-      });
-    } else {
-      // Update existing user
-      await prisma.user.update({
-        where: {
-          mobile_no: findOtp.userphone,
-        },
-        data: {
-          isPhoneNoVerified: true,
-          phoneNoVerified: new Date(),
-        },
-      });
-    }
+  await prisma.otp.delete({
+    where: {
+      otp: findOtp.otp,
+    },
+  });
 
-    await prisma.otp.delete({
-      where: {
-        otp: findOtp.otp,
-      },
-    });
+  // Generate login token
+  const loginToken = generateToken({
+    id: user.id,
+    mobile_no: user.mobile_no,
+    role: user.role,
+    type: "login",
+  });
 
-    // Get or create user to get the ID
-    let user = await prisma.user.findUnique({
-      where: { mobile_no: findOtp.userphone },
-      select: { id: true, mobile_no: true, role: true },
-    });
+  const message = verifyJwt.type === "verify" ? "mobile verified successfully" : "OTP verified successfully";
 
-    if (!user) {
-      // Create user if doesn't exist
-      user = await prisma.user.create({
-        data: {
-          mobile_no: findOtp.userphone,
-          isPhoneNoVerified: true,
-          phoneNoVerified: new Date(),
-        },
-        select: { id: true, mobile_no: true, role: true },
-      });
-    } else {
-      // Update existing user
-      user = await prisma.user.update({
-        where: { mobile_no: findOtp.userphone },
-        data: {
-          isPhoneNoVerified: true,
-          phoneNoVerified: new Date(),
-        },
-        select: { id: true, mobile_no: true, role: true },
-      });
-    }
-
-    // Generate login token for automatic sign-in after signup verification
-    const loginToken = generateToken({
-      id: user.id,
-      mobile_no: user.mobile_no,
-      role: user.role,
-      type: "login",
-    });
-
-    res
-      .status(HttpStatusCodes.OK)
-      .json({ success: true, message: "mobile verified successfully", jwt: loginToken });
-  } else {
-    // For login type, generate a login token for NextAuth
-    // Fetch user role and include it in JWT payload, create user if not exists
-    let user = await prisma.user.findUnique({
-      where: { mobile_no: findOtp.userphone },
-      select: { id: true, mobile_no: true, role: true },
-    });
-
-    if (!user) {
-      // Create user if doesn't exist
-      user = await prisma.user.create({
-        data: {
-          mobile_no: findOtp.userphone,
-          isPhoneNoVerified: true,
-          phoneNoVerified: new Date(),
-        },
-        select: { id: true, mobile_no: true, role: true },
-      });
-    } else {
-      // Update existing user
-      user = await prisma.user.update({
-        where: { mobile_no: findOtp.userphone },
-        data: {
-          isPhoneNoVerified: true,
-          phoneNoVerified: new Date(),
-        },
-        select: { id: true, mobile_no: true, role: true },
-      });
-    }
-
-    const loginToken = generateToken({
-      id: user.id,
-      mobile_no: user.mobile_no,
-      role: user.role,
-      type: "login",
-    });
-
-    await prisma.otp.delete({
-      where: {
-        otp: findOtp.otp,
-      },
-    });
-
-    console.log(loginToken);
-    res.status(HttpStatusCodes.OK).json({
-      success: true,
-      message: "OTP verified successfully",
-      jwt: loginToken,
-    });
-  }
+  res
+    .status(HttpStatusCodes.OK)
+    .json({ success: true, message, jwt: loginToken });
 };
 
 const forgotPassword = async (
