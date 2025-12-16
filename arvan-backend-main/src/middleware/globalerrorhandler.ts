@@ -146,6 +146,7 @@ export const authenticateJWT: RequestHandler = async (
       console.warn("AUTH_SECRET is not set. JWT verification will fail if tokens are signed with a secret.");
     }
 
+<<<<<<< HEAD
     let userRecord = null;
     let decodedToken: any = null;
 
@@ -162,6 +163,23 @@ export const authenticateJWT: RequestHandler = async (
         decodedToken = jwt.verify(jwtToken, ENV.AUTH_SECRET, { clockTolerance: 300 }) as any;
         if (decodedToken && (decodedToken.type === "verify" || decodedToken.type === "otp" || decodedToken.userphone)) {
           return next();
+=======
+    // First, try to get user from Authorization header (JWT token)
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const jwtToken = authHeader.substring(7);
+      if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
+        try {
+          decodedToken = jwt.verify(jwtToken, ENV.AUTH_SECRET, { clockTolerance: 60 * 60 * 24 * 365 * 10 }) as any; // 10 years tolerance for clock skew
+          if (decodedToken && decodedToken.id && decodedToken.type === "login") {
+            userRecord = await prisma.user.findUnique({
+              where: { id: decodedToken.id },
+            });
+          }
+        } catch (jwtError) {
+          console.error("JWT verification failed:", jwtError);
+          // Continue to fallback
+>>>>>>> 12b1d31 (OTP auth fix Decode2)
         }
         if (decodedToken && decodedToken.id) {
           userRecord = await prisma.user.findUnique({
