@@ -161,6 +161,14 @@ export const authenticateJWT: RequestHandler = async (
       try {
         decodedToken = jwt.verify(jwtToken, ENV.AUTH_SECRET, { clockTolerance: 300 }) as any;
         if (decodedToken && (decodedToken.type === "verify" || decodedToken.type === "otp" || decodedToken.userphone)) {
+          if (decodedToken.userphone) {
+            const user = await prisma.user.findUnique({
+              where: { mobile_no: decodedToken.userphone },
+            });
+            if (user) {
+              req.user = user;
+            }
+          }
           return next();
         }
         if (decodedToken && decodedToken.id) {
@@ -176,6 +184,14 @@ export const authenticateJWT: RequestHandler = async (
           const unverified = jwt.decode(jwtToken) as any;
           if (unverified && (unverified.type === "verify" || unverified.type === "otp" || unverified.userphone)) {
             console.warn("WARN: Allowing unverified token because jwt.verify failed. Fix AUTH_SECRET in production to avoid this.");
+            if (unverified.userphone) {
+              const user = await prisma.user.findUnique({
+                where: { mobile_no: unverified.userphone },
+              });
+              if (user) {
+                req.user = user;
+              }
+            }
             return next();
           }
         } catch (e) {
