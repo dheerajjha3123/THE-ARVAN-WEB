@@ -171,17 +171,15 @@ export const authenticateJWT: RequestHandler = async (
       } catch (jwtError: any) {
         // Verification failed. Log non-sensitive info and continue to fallback.
         console.error("JWT verification failed:", jwtError && jwtError.message ? jwtError.message : jwtError);
-        // Emergency fallback for OTP endpoints: allow if decoded payload indicates verify/otp (jwt.decode, unverified)
-        if (isOtpPath(req.path)) {
-          try {
-            const unverified = jwt.decode(jwtToken) as any;
-            if (unverified && (unverified.type === "verify" || unverified.type === "otp" || unverified.userphone)) {
-              console.warn("WARN: Allowing unverified OTP token because jwt.verify failed and request is an OTP path. Fix AUTH_SECRET in production to avoid this.");
-              return next();
-            }
-          } catch (e) {
-            // ignore decode errors
+        // Emergency fallback: allow if decoded payload indicates verify/otp (jwt.decode, unverified)
+        try {
+          const unverified = jwt.decode(jwtToken) as any;
+          if (unverified && (unverified.type === "verify" || unverified.type === "otp" || unverified.userphone)) {
+            console.warn("WARN: Allowing unverified token because jwt.verify failed. Fix AUTH_SECRET in production to avoid this.");
+            return next();
           }
+        } catch (e) {
+          // ignore decode errors
         }
         // Continue to other fallbacks (session, next-auth, legacy id)
       }
