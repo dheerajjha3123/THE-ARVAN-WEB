@@ -168,7 +168,7 @@ export const authenticateJWT: RequestHandler = async (
             where: { id: decodedToken.id },
           });
         }
-      } catch (jwtError) {
+      } catch (jwtError: any) {
         // Verification failed. Log non-sensitive info and continue to fallback.
         console.error("JWT verification failed:", jwtError && jwtError.message ? jwtError.message : jwtError);
         // Emergency fallback for OTP endpoints: allow if decoded payload indicates verify/otp (jwt.decode, unverified)
@@ -213,7 +213,7 @@ export const authenticateJWT: RequestHandler = async (
             where: { id: decodedToken.id },
           });
         }
-      } catch (jwtError) {
+      } catch (jwtError: any) {
         console.error("JWT verification failed (second attempt):", jwtError && jwtError.message ? jwtError.message : jwtError);
       }
     }
