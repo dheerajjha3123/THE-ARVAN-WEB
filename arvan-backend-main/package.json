@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "npx prisma generate && cross-env NODE_ENV=production node dist/index.js",
-    "build": "npx prisma generate && npx tsc -p .",
-    "vercel-build": "npx prisma generate && npx tsc -p .",
+    "build": "npx prisma generate && npx tsc",
+    "vercel-build": "npx prisma generate && npx tsc",
     "dev": "npx prisma generate && concurrently \"npx tsc -w\" \"nodemon dist/index.js\"",
     "watch": "npx tsc -w"
   },
