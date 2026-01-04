@@ -1,6 +1,6 @@
-# AWS EC2 Ubuntu Deployment Guide for Arvan Project
+# AWS EC2 + Vercel Deployment Guide for Arvan Project
 
-This guide provides step-by-step instructions to deploy the Arvan backend (Node.js with Prisma ORM) and frontend (Next.js) on a single AWS EC2 Ubuntu instance.
+This guide provides step-by-step instructions to deploy the Arvan backend (Node.js with Prisma ORM) on AWS EC2 Ubuntu and the frontend (Next.js) on Vercel.
 
 ## Prerequisites
 - AWS account with EC2 access
@@ -109,40 +109,19 @@ pm2 start ecosystem.config.js
 pm2 save
 ```
 
-## Step 11: Build and Start Frontend
-```bash
-cd ../arvan-main
-pnpm install
-pnpm run build
-pm2 start "pnpm start" --name "arvan-frontend"
-pm2 save
-```
-
-## Step 12: Install and Configure Nginx
+## Step 11: Install and Configure Nginx for Backend
 ```bash
 sudo apt install -y nginx
-sudo nano /etc/nginx/sites-available/arvan
+sudo nano /etc/nginx/sites-available/arvan-backend
 ```
 
-Add this configuration:
+Add this configuration for backend API:
 ```
 server {
     listen 80;
-    server_name your-domain.com;
+    server_name your-backend-domain.com;
 
     location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-
-    location /backend {
         proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -158,10 +137,32 @@ server {
 
 Enable site:
 ```bash
-sudo ln -s /etc/nginx/sites-available/arvan /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/arvan-backend /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
+
+## Frontend Deployment on Vercel
+
+### Step 12: Prepare Frontend for Vercel
+1. Go to [Vercel](https://vercel.com) and sign in
+2. Click "New Project"
+3. Import your repository (select the `arvan-main` folder)
+4. Configure build settings:
+   - Framework Preset: Next.js
+   - Root Directory: `arvan-main`
+   - Build Command: `pnpm run build`
+   - Output Directory: `.next`
+
+### Step 13: Set Environment Variables in Vercel
+In your Vercel project settings, add these environment variables:
+- `NEXT_PUBLIC_BACKEND_URL`: `https://your-backend-domain.com`
+- `NEXT_PUBLIC_FRONTEND_URL`: `https://your-frontend-domain.vercel.app`
+
+### Step 14: Deploy Frontend
+1. Click "Deploy"
+2. Vercel will automatically build and deploy your frontend
+3. Your frontend will be available at `https://your-project-name.vercel.app`
 
 ## Step 13: Set Up SSL with Let's Encrypt (Optional)
 ```bash
@@ -175,10 +176,10 @@ sudo certbot --nginx -d your-domain.com
 - Add health checks
 
 ## Step 15: Test Deployment
-- Access your-domain.com (frontend)
-- Test API endpoints at your-domain.com/backend/api/...
-- Check PM2 status: `pm2 status`
-- Monitor logs: `pm2 logs`
+- Access your-frontend-domain.vercel.app (frontend)
+- Test API endpoints at your-backend-domain.com/api/...
+- Check PM2 status on EC2: `pm2 status`
+- Monitor backend logs: `pm2 logs`
 
 ## Troubleshooting
 - Check PM2 logs: `pm2 logs arvan-backend`
