@@ -98,6 +98,8 @@ npx prisma generate
 
 ## Step 9: Install and Configure PM2
 ```bash
+# Run these commands from the backend directory
+cd arvan-backend-main
 npm install -g pm2
 pm2 startup
 sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u ubuntu --hp /home/ubuntu
@@ -105,6 +107,7 @@ sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -
 
 ## Step 10: Start Backend with PM2
 ```bash
+# Still in the backend directory
 pm2 start ecosystem.config.js
 pm2 save
 ```

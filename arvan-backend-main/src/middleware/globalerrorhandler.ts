@@ -16,6 +16,14 @@ const isValidJWT = (token: string): boolean => {
   return parts.length === 3 && parts.every(part => /^[A-Za-z0-9_-]*$/.test(part));
 };
 
+const verifyJWT = (token: string) => {
+  const decoded = jwt.decode(token) as any;
+  if (!decoded) throw new Error('Invalid token');
+  const now = Math.floor(Date.now() / 1000);
+  const clockTimestamp = Math.max(now, decoded.iat);
+  return jwt.verify(token, ENV.AUTH_SECRET, { clockTolerance: 60 * 60 * 24 * 365 * 10, clockTimestamp });
+};
+
 const cleanMessage = (message: string) => message.replace(/(\r\n|\r|\n)/g, " ");
 export const globalErrorHandler = (
   err: Error & { code?: string; meta?: any },
@@ -132,7 +140,7 @@ export const authenticateJWT: RequestHandler = async (
       const jwtToken = authHeader.substring(7);
       if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
         try {
-          decodedToken = jwt.verify(jwtToken, ENV.AUTH_SECRET, { clockTolerance: 60 * 60 * 24 * 365 * 10 }) as any; // 10 years tolerance for clock skew
+          decodedToken = verifyJWT(jwtToken) as any;
           if (decodedToken && decodedToken.id && decodedToken.type === "login") {
             userRecord = await prisma.user.findUnique({
               where: { id: decodedToken.id },
@@ -171,7 +179,7 @@ export const authenticateJWT: RequestHandler = async (
       const jwtToken = authHeader.substring(7); // Remove 'Bearer '
       if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
         try {
-          decodedToken = jwt.verify(jwtToken, ENV.AUTH_SECRET, { clockTolerance: 60 * 60 * 24 * 365 * 10 }) as any; // 10 years tolerance for clock skew
+          decodedToken = verifyJWT(jwtToken) as any;
           if (decodedToken && decodedToken.id) {
             userRecord = await prisma.user.findUnique({
               where: { id: decodedToken.id },
