@@ -1,15 +1,23 @@
-# TODO: Fix Authentication Error in Production
+# TODO: Fix 403 Error in Production After OTP Login
 
-## Issue
-- Login succeeds but fetching data or adding products fails with "Unauthorized: No valid token or user found"
-- Server clock is ahead, causing JWT verification to fail due to future iat timestamps
+## Problem
+In production, after successful OTP login for new users, subsequent requests (like accessing profile or buying) fail with 403 "Unauthorized: No valid token or user found" error. Works fine locally.
+
+## Root Cause
+Database replication lag in production causes the authenticateJWT middleware to fail finding the newly created user by ID, as the user record hasn't synced to the read replica yet.
+
+## Solution
+Added fallback in authenticateJWT to find user by mobile_no if not found by id. Since mobile_no is unique and present in the JWT, this ensures the user is found even during sync delays.
 
 ## Changes Made
-- [x] Added custom verifyJWT function to handle clock skew by setting clockTimestamp to max(now, decoded.iat)
-- [x] Replaced jwt.verify calls in authenticateJWT with verifyJWT for login token verification
-- [x] Replaced jwt.verify calls in fallback JWT decoding with verifyJWT
+- [x] Modified authenticateJWT in globalerrorhandler.ts to add fallback lookup by mobile_no when id lookup fails
+- [x] Added fallback in both places where user is looked up by id from JWT
 
-## Next Steps
-- [x] Deploy changes to production
-- [ ] Monitor logs for authentication errors
-- [ ] If issues persist, consider fixing server clock or adjusting tolerance
+## Testing
+- Deploy the changes to production
+- Test OTP login flow for new user
+- Verify profile access and buying work without 403 errors
+
+## Followup
+- Monitor production logs for any remaining authentication issues
+- If issues persist, consider forcing reads from master database for critical auth operations

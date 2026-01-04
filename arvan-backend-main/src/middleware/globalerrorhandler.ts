@@ -145,6 +145,12 @@ export const authenticateJWT: RequestHandler = async (
             userRecord = await prisma.user.findUnique({
               where: { id: decodedToken.id },
             });
+            // Fallback: if not found by id, try by mobile_no (for production db sync issues)
+            if (!userRecord && decodedToken.mobile_no) {
+              userRecord = await prisma.user.findUnique({
+                where: { mobile_no: decodedToken.mobile_no },
+              });
+            }
           }
         } catch (jwtError) {
           console.error("JWT verification failed:", jwtError);
@@ -184,6 +190,12 @@ export const authenticateJWT: RequestHandler = async (
             userRecord = await prisma.user.findUnique({
               where: { id: decodedToken.id },
             });
+            // Fallback: if not found by id, try by mobile_no (for production db sync issues)
+            if (!userRecord && decodedToken.mobile_no) {
+              userRecord = await prisma.user.findUnique({
+                where: { mobile_no: decodedToken.mobile_no },
+              });
+            }
           }
         } catch (jwtError) {
           console.error("JWT verification failed:", jwtError);
