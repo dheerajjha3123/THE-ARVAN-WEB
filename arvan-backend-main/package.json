@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "npx prisma generate && cross-env NODE_ENV=production node dist/index.js",
-    "build": "npx prisma generate && node --max-old-space-size=4096 node_modules/.bin/tsc",
+    "build": "npx prisma generate && NODE_OPTIONS=\"--max-old-space-size=4096\" npx tsc",
     "dev": "npx prisma generate && concurrently \"npx tsc -w\" \"nodemon dist/index.js\"",
     "watch": "npx tsc -w"
   },
@@ -46,7 +46,7 @@
     "nodemon": "^3.1.9",
     "prisma": "^6.4.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.9.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
