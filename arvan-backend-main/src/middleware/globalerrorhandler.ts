@@ -141,7 +141,7 @@ export const authenticateJWT: RequestHandler = async (
       if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
         try {
           decodedToken = verifyJWT(jwtToken) as any;
-          if (decodedToken && decodedToken.id && decodedToken.type === "login") {
+          if (decodedToken && decodedToken.id && (decodedToken.type === "login" || decodedToken.type === "verify")) {
             userRecord = await prisma.user.findUnique({
               where: { id: decodedToken.id },
             });
