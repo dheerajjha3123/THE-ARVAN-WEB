@@ -170,7 +170,7 @@ In your Vercel project settings, add these environment variables:
 ## Step 13: Set Up SSL with Let's Encrypt (Optional)
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d your-domain.com
+sudo certbot --nginx -d thearvan.com
 ```
 
 ## Step 14: Configure Auto-Scaling and Monitoring (Optional)

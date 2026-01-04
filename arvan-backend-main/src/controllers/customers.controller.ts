@@ -226,48 +226,51 @@ const getOtpByNumber = async (
   res: Response,
   next: NextFunction
 ) => {
-  console.log(req.body);
-  const parsedData = makeotpSchema.safeParse(req.body);
+  try {
+    console.log(req.body);
+    const parsedData = makeotpSchema.safeParse(req.body);
 
-  if (!parsedData.success) {
-    throw new ValidationErr(parsedData.error.errors);
-  }
+    if (!parsedData.success) {
+      throw new ValidationErr(parsedData.error.errors);
+    }
 
-
-
-  const findOtp = await prisma.otp.findUnique({
-    where: {
-      userphone: parsedData.data.mobile_no,
-    },
-  });
-
-  if (findOtp) {
-    await prisma.otp.delete({
+    const findOtp = await prisma.otp.findUnique({
       where: {
         userphone: parsedData.data.mobile_no,
       },
     });
+
+    if (findOtp) {
+      await prisma.otp.delete({
+        where: {
+          userphone: parsedData.data.mobile_no,
+        },
+      });
+    }
+    console.log("getOtp");
+    const getOtp = generateSecureOTP();
+
+    await sendOtp(getOtp, parsedData.data.mobile_no);
+
+    // Set token expiry longer for forgetpassword type
+    const tokenExpiry = parsedData.data.type === "forgetpassword" ? 3600 : 900;
+
+    const jwt = await generateToken({ userphone: parsedData.data.mobile_no, type: parsedData.data.type }, tokenExpiry);
+    await prisma.otp.create({
+      data: {
+        userphone: parsedData.data.mobile_no,
+        otp: getOtp,
+        jwt: jwt
+      },
+    });
+
+    res
+      .status(HttpStatusCodes.OK)
+      .json({ success: true, message: "OTP sent successfully", jwt });
+  } catch (error) {
+    console.error("Error in getOtpByNumber:", error);
+    throw new RouteError(HttpStatusCodes.INTERNAL_SERVER_ERROR, "Failed to send OTP");
   }
-  console.log("getOtp");
-  const getOtp = generateSecureOTP();
-
-  await sendOtp(getOtp, parsedData.data.mobile_no);
-
-  // Set token expiry longer for forgetpassword type
-  const tokenExpiry = parsedData.data.type === "forgetpassword" ? 3600 : 900;
-
-  const jwt = await generateToken({ userphone: parsedData.data.mobile_no, type: parsedData.data.type }, tokenExpiry);
-  await prisma.otp.create({
-    data: {
-      userphone: parsedData.data.mobile_no,
-      otp: getOtp,
-      jwt: jwt
-    },
-  });
-
-  res
-    .status(HttpStatusCodes.OK)
-    .json({ success: true, message: "OTP sent successfully", jwt });
 };
 
 const getOtpByJwt = async (
