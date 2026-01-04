@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "prisma generate --no-engine && next dev --turbopack",
-    "build": "prisma generate --no-engine && next build",
+    "build": "NODE_OPTIONS=--max-old-space-size=4096 prisma generate --no-engine && next build ",
     "start": "next start",
     "lint": "next lint"
   },
