@@ -255,7 +255,23 @@ const getOtpByNumber = async (
     // Set token expiry longer for forgetpassword type
     const tokenExpiry = parsedData.data.type === "forgetpassword" ? 3600 : 900;
 
-    const jwt = await generateToken({ userphone: parsedData.data.mobile_no, type: parsedData.data.type }, tokenExpiry);
+    let user = null;
+    if (parsedData.data.type === "verify") {
+      // For verify type, upsert user to ensure it exists for authentication
+      user = await prisma.user.upsert({
+        where: { mobile_no: parsedData.data.mobile_no },
+        update: {},
+        create: { mobile_no: parsedData.data.mobile_no },
+      });
+    } else {
+      // For other types, find existing user
+      user = await prisma.user.findUnique({ where: { mobile_no: parsedData.data.mobile_no },});
+      if (!user && parsedData.data.type === "forgetpassword") {
+        throw new RouteError(HttpStatusCodes.BAD_REQUEST, "User not found");
+      }
+    }
+
+    const jwt = await generateToken({ id: user?.id, userphone: parsedData.data.mobile_no, type: parsedData.data.type }, tokenExpiry);
     await prisma.otp.create({
       data: {
         userphone: parsedData.data.mobile_no,
@@ -307,7 +323,9 @@ const getOtpByJwt = async (
   // Set token expiry longer for forgetpassword type
   const tokenExpiry = data.type === "forgetpassword" ? "1h" : "15m";
 
-  const jwt = await generateToken({ userphone: data.userphone, type: data.type }, tokenExpiry);
+  const user = await prisma.user.findUnique({ where: { mobile_no: data.userphone },
+   });
+  const jwt = await generateToken({id: user?.id, userphone: data.userphone, type: data.type }, tokenExpiry);
   await prisma.otp.create({
     data: {
       userphone: data.userphone,
@@ -394,6 +412,7 @@ const verfy_otp = async (req: Request, res: Response, next: NextFunction) => {
   // Generate login token
   const loginToken = generateToken({
     id: user.id,
+    userphone: user.mobile_no,
     mobile_no: user.mobile_no,
     role: user.role,
     type: "login",

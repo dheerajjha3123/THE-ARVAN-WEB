@@ -21,7 +21,7 @@ const verifyJWT = (token: string) => {
   if (!decoded) throw new Error('Invalid token');
   const now = Math.floor(Date.now() / 1000);
   const clockTimestamp = Math.max(now, decoded.iat);
-  return jwt.verify(token, ENV.AUTH_SECRET, { clockTolerance: 60 * 60 * 24 * 365 * 10, clockTimestamp });
+  return jwt.verify(token, ENV.AUTH_SECRET, { clockTolerance: 300, clockTimestamp });
 };
 
 const cleanMessage = (message: string) => message.replace(/(\r\n|\r|\n)/g, " ");
@@ -141,11 +141,19 @@ export const authenticateJWT: RequestHandler = async (
       if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
         try {
           decodedToken = verifyJWT(jwtToken) as any;
-          if (decodedToken && decodedToken.id && (decodedToken.type === "login" || decodedToken.type === "verify")) {
-            userRecord = await prisma.user.findUnique({
-              where: { id: decodedToken.id },
+          if (decodedToken && (decodedToken.type === "login" || decodedToken.type === "verify")) {
+            if (decodedToken.id) {
+              userRecord = await prisma.user.findUnique({
+                where: { id: decodedToken.id },
             });
-          }
+             }
+
+          if (!userRecord && decodedToken.userphone) {
+          userRecord = await prisma.user.findUnique({
+           where: { mobile_no: decodedToken.userphone },
+            });
+           }
+         }
         } catch (jwtError) {
           console.error("JWT verification failed:", jwtError);
           // Continue to fallback

@@ -4,14 +4,15 @@
 In production, after successful OTP login for new users, subsequent requests (like accessing profile or buying) fail with 403 "Unauthorized: No valid token or user found" error. Works fine locally.
 
 ## Root Cause
-The authenticateJWT middleware was only accepting JWT tokens with type "login", but after OTP verification, the frontend was sending the JWT from the OTP request which has type "verify". This caused authentication to fail even though the user was properly created.
+The authenticateJWT middleware was only accepting JWT tokens with type "login", but after OTP verification, the frontend was sending the JWT from the OTP request which has type "verify". This caused authentication to fail even though the user was properly created. Additionally, for new users, the "verify" JWT was generated before the user existed in the database.
 
 ## Solution
-Modified authenticateJWT to accept both "login" and "verify" type JWT tokens, since both represent authenticated users.
+Modified authenticateJWT to accept both "login" and "verify" type JWT tokens, and ensured users are created during OTP generation for "verify" type to allow authentication.
 
 ## Changes Made
 - [x] Modified authenticateJWT in globalerrorhandler.ts to accept both "login" and "verify" JWT types
-- [x] This allows the JWT returned from OTP verification (type "verify") to be used for authentication
+- [x] Modified getOtpByNumber in customers.controller.ts to upsert user for "verify" type OTP requests
+- [x] This allows the JWT returned from OTP generation (type "verify") to be used for authentication even for new users
 
 ## Testing
 - Deploy the changes to production
