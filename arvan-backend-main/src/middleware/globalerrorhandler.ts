@@ -153,19 +153,15 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
         try {
           decodedToken = verifyJWT(jwtToken) as any;
           if (decodedToken && (decodedToken.type === "login" || decodedToken.type === "verify")) {
-            if (decodedToken.type === "verify" && decodedToken.userphone) {
-              // For verify type, try mobile_no first
-              userRecord = await prisma.user.findUnique({
-                where: { mobile_no: decodedToken.userphone },
-              });
-            } else if (decodedToken.id) {
-              // For login type, try id first
+            if (decodedToken.id) {
+              // Try id first for both types
               userRecord = await prisma.user.findUnique({
                 where: { id: decodedToken.id },
               });
             }
 
             if (!userRecord && decodedToken.userphone) {
+              // Fallback to mobile_no
               userRecord = await prisma.user.findUnique({
                 where: { mobile_no: decodedToken.userphone },
               });
@@ -176,6 +172,15 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
           // Continue to fallback
         }
       }
+    }
+
+    // For verify type, ensure user exists (handles db sync issues)
+    if (!userRecord && decodedToken && decodedToken.type === "verify" && decodedToken.userphone) {
+      userRecord = await prisma.user.upsert({
+        where: { mobile_no: decodedToken.userphone },
+        update: {},
+        create: { mobile_no: decodedToken.userphone },
+      });
     }
 
     if (!userRecord) {
