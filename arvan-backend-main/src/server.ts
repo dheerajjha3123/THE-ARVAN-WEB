@@ -29,6 +29,8 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(helmet());
+
 
 // Show routes called in console during development
 if (ENV.NODE_ENV === NodeEnvs.Dev) {
@@ -56,16 +58,46 @@ app.use("/api/whatsapp", whatsappRoutes);
 app.use("/api/health", healthCheck);
 
 //CORS
-const whitelist = [ENV.FRONTENDURL];
-const corsOptions = {
-  origin: ENV.FRONTENDURL,// Only allow your frontend URL
-  credentials: true,     
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-};
-app.set("trust proxy", true);
+// const whitelist = [ENV.FRONTENDURL];
+// const corsOptions = {
+//   origin: ENV.FRONTENDURL,// Only allow your frontend URL
+//   credentials: true,     
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: ['Content-Type', 'Authorization'],
+// };
+// app.set("trust proxy", true);
 
+// app.use(cors(corsOptions));
+const whitelist = ENV.FRONTENDURL
+  ? ENV.FRONTENDURL.split(",").map(url => url.trim())
+  : [];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+
+    if (whitelist.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(null, false);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+  ],
+};
+
+app.set("trust proxy", true);
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
+
+
 // Add APIs, must be after middleware
 
 import UserRouter from './routes/products.routes.js'
@@ -83,36 +115,54 @@ import productPerformanceRouter from './routes/productperformance.routes.js'
 import shipRocketRoutes from './routes/shipRocket.routes.js'
 import merchantRoutes from './routes/merchant.routes.js'
 
-app.use(globalErrorHandler);
+// app.use("/api/products", UserRouter);
+// // app.use(Paths.Base, BaseRouter);
+
+// app.use("/api/upload", uploadRouter);
+
+// app.use("/api/category", categoryRouter);
+
+// app.use("/api/customers", customersRoutes);
+
+// app.use("/api/orders", orderRoutes);
+
+// app.use("/api/reviews", productratingRoutes);
+
+// app.use("/api/testimonials", testimonialsRoutes);
+
+
+// app.use("/api/send", resendEmailRoutes);
+
+// app.use("/api/inventory", inventoryRouter);
+
+// app.use("/api/analytics", analyticsRoutes);
+
+// app.use("/api/sales", getAllTimeMetricsRoutes);
+
+// app.use("/api/productperformance", productPerformanceRouter);
+
+// app.use("/api/shiprocket", authenticateJWT, shipRocketRoutes);
+
+// app.use("/api/merchant", merchantRoutes);
+
+// ROUTES
 app.use("/api/products", UserRouter);
-// app.use(Paths.Base, BaseRouter);
-
 app.use("/api/upload", uploadRouter);
-
 app.use("/api/category", categoryRouter);
-
 app.use("/api/customers", customersRoutes);
-
 app.use("/api/orders", orderRoutes);
-
 app.use("/api/reviews", productratingRoutes);
-
 app.use("/api/testimonials", testimonialsRoutes);
-
-
 app.use("/api/send", resendEmailRoutes);
-
 app.use("/api/inventory", inventoryRouter);
-
 app.use("/api/analytics", analyticsRoutes);
-
 app.use("/api/sales", getAllTimeMetricsRoutes);
-
 app.use("/api/productperformance", productPerformanceRouter);
-
 app.use("/api/shiprocket", authenticateJWT, shipRocketRoutes);
-
 app.use("/api/merchant", merchantRoutes);
+
+app.use(globalErrorHandler);
+
 
 // Add error handler
 
