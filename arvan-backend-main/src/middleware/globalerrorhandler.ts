@@ -152,8 +152,8 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
       if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
         try {
           decodedToken = verifyJWT(jwtToken) as any;
-          // if (decodedToken && (decodedToken.type === "login" || decodedToken.type === "verify")) {
-          if (decodedToken?.type === "login") {
+          if (decodedToken && (decodedToken.type === "login" || decodedToken.type === "verify")) {
+          // if (decodedToken?.type === "login") {
             if (decodedToken.id) {
               userRecord = await prisma.user.findUnique({
                 where: { id: decodedToken.id },

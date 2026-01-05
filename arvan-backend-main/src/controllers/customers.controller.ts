@@ -412,6 +412,7 @@ const verfy_otp = async (req: Request, res: Response, next: NextFunction) => {
   // Generate login token
   const loginToken = generateToken({
     id: user.id,
+    // phone: user.mobile_no,
     userphone: user.mobile_no,
     mobile_no: user.mobile_no,
     role: user.role,
