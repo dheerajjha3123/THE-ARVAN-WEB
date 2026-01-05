@@ -12,6 +12,7 @@ Modified authenticateJWT to accept both "login" and "verify" type JWT tokens, an
 ## Changes Made
 - [x] Modified authenticateJWT in globalerrorhandler.ts to accept both "login" and "verify" JWT types
 - [x] Modified getOtpByNumber in customers.controller.ts to upsert user for "verify" type OTP requests
+- [x] Modified authenticateJWT to prioritize mobile_no lookup for "verify" type JWTs
 - [x] This allows the JWT returned from OTP generation (type "verify") to be used for authentication even for new users
 
 ## Testing

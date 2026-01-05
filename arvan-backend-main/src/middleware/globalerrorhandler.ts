@@ -153,19 +153,24 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
         try {
           decodedToken = verifyJWT(jwtToken) as any;
           if (decodedToken && (decodedToken.type === "login" || decodedToken.type === "verify")) {
-          // if (decodedToken?.type === "login") {
-            if (decodedToken.id) {
+            if (decodedToken.type === "verify" && decodedToken.userphone) {
+              // For verify type, try mobile_no first
+              userRecord = await prisma.user.findUnique({
+                where: { mobile_no: decodedToken.userphone },
+              });
+            } else if (decodedToken.id) {
+              // For login type, try id first
               userRecord = await prisma.user.findUnique({
                 where: { id: decodedToken.id },
-            });
-             }
+              });
+            }
 
-          if (!userRecord && decodedToken.userphone) {
-          userRecord = await prisma.user.findUnique({
-           where: { mobile_no: decodedToken.userphone },
-            });
-           }
-         }
+            if (!userRecord && decodedToken.userphone) {
+              userRecord = await prisma.user.findUnique({
+                where: { mobile_no: decodedToken.userphone },
+              });
+            }
+          }
         } catch (jwtError) {
           console.error("JWT verification failed:", jwtError);
           // Continue to fallback
