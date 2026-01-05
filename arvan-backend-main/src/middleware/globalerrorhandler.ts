@@ -152,20 +152,36 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
       if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
         try {
           decodedToken = verifyJWT(jwtToken) as any;
+          console.log("Decoded token:", decodedToken);
           if (decodedToken && (decodedToken.type === "login" || decodedToken.type === "verify")) {
-            if (decodedToken.id) {
-              // Try id first for both types
+            if (decodedToken.type === "verify" && decodedToken.userphone) {
+              console.log("Upserting user for verify type:", decodedToken.userphone);
+              // For verify type, directly upsert by mobile_no to handle db sync issues
+              userRecord = await prisma.user.upsert({
+                where: { mobile_no: decodedToken.userphone },
+                update: {},
+                create: { mobile_no: decodedToken.userphone },
+              });
+              console.log("Upserted user:", userRecord);
+            } else if (decodedToken.id) {
+              console.log("Finding user by id:", decodedToken.id);
+              // For login type, try id first
               userRecord = await prisma.user.findUnique({
                 where: { id: decodedToken.id },
               });
+              console.log("Found user by id:", userRecord);
             }
 
             if (!userRecord && decodedToken.userphone) {
-              // Fallback to mobile_no
+              console.log("Fallback: finding user by mobile_no:", decodedToken.userphone);
+              // Fallback to mobile_no for login type
               userRecord = await prisma.user.findUnique({
                 where: { mobile_no: decodedToken.userphone },
               });
+              console.log("Found user by mobile_no:", userRecord);
             }
+          } else {
+            console.log("Token type not login or verify:", decodedToken?.type);
           }
         } catch (jwtError) {
           console.error("JWT verification failed:", jwtError);
