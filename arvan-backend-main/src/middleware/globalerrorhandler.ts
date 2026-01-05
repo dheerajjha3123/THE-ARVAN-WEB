@@ -127,9 +127,20 @@ export const authenticateJWT: RequestHandler = async (
 ): Promise<any> => {
   try {
     // Allow skipping auth check on OTP-related endpoints
-    if (req.path.includes('/otp') || req.path.includes('/verify-otp') || req.path.includes('/reset-password') || req.path.includes('/resend-otp')) {
-      return next();
-    }
+
+    const publicAuthRoutes = [
+     "/otp",
+     "/verify-otp",
+     "/resend-otp",
+     "/reset-password",
+   ];
+
+if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
+  return next();
+}
+    // if (req.path.includes('/otp') || req.path.includes('/verify-otp') || req.path.includes('/reset-password') || req.path.includes('/resend-otp')) {
+    //   return next();
+    // }
 
     let userRecord = null;
     let decodedToken = null;
@@ -141,7 +152,8 @@ export const authenticateJWT: RequestHandler = async (
       if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
         try {
           decodedToken = verifyJWT(jwtToken) as any;
-          if (decodedToken && (decodedToken.type === "login" || decodedToken.type === "verify")) {
+          // if (decodedToken && (decodedToken.type === "login" || decodedToken.type === "verify")) {
+          if (decodedToken?.type === "login") {
             if (decodedToken.id) {
               userRecord = await prisma.user.findUnique({
                 where: { id: decodedToken.id },
