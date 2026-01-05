@@ -37,10 +37,10 @@ export const globalErrorHandler = (
   }
 
   // Handle Prisma Known Request Error
-  if (err instanceof (prisma as any).$extends.ErrorConstructor.PrismaClientKnownRequestError) {
-    const statusCode = err.code ? exceptionCodes[err.code] : HttpStatusCodes.BAD_REQUEST;
+  if (err && typeof err === 'object' && 'code' in err && err.code && exceptionCodes[err.code]) {
+    const statusCode = exceptionCodes[err.code];
     const message =
-      ENV.NODE_ENV === "production" ? err.meta : cleanMessage(err.message);
+      ENV.NODE_ENV === "production" ? (err.meta as any)?.message || "Database error" : cleanMessage(err.message);
     return res.status(statusCode).json({
       success: false,
       statusCode,
@@ -50,7 +50,7 @@ export const globalErrorHandler = (
   }
 
   // Handle Prisma Unknown Request Error
-  if (err instanceof (prisma as any).$extends.ErrorConstructor.PrismaClientUnknownRequestError) {
+  if (err.code === 'P1001' || err.code === 'P1017' || err.message?.includes('Unknown request error')) {
     return res.status(HttpStatusCodes.INTERNAL_SERVER_ERROR).json({
       success: false,
       statusCode: HttpStatusCodes.INTERNAL_SERVER_ERROR,
@@ -60,7 +60,7 @@ export const globalErrorHandler = (
   }
 
   // Handle Prisma Validation Error
-  if (err instanceof (prisma as any).$extends.ErrorConstructor.PrismaClientValidationError) {
+  if (err.code === 'P2000' || err.code === 'P2001' || err.code === 'P2002' || err.message?.includes('Validation error')) {
     const indexOfArgument = err.message.indexOf("Argument");
     const message = cleanMessage(err.message.substring(indexOfArgument));
     return res.status(HttpStatusCodes.BAD_REQUEST).json({
@@ -195,11 +195,16 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
 
     // For verify type, ensure user exists (handles db sync issues)
     if (!userRecord && decodedToken && decodedToken.type === "verify" && decodedToken.userphone) {
-      userRecord = await prisma.user.upsert({
-        where: { mobile_no: decodedToken.userphone },
-        update: {},
-        create: { mobile_no: decodedToken.userphone },
-      });
+      try {
+        userRecord = await prisma.user.upsert({
+          where: { mobile_no: decodedToken.userphone },
+          update: {},
+          create: { mobile_no: decodedToken.userphone },
+        });
+      } catch (dbError) {
+        console.error("Database error in final upsert for verify type:", dbError);
+        // Continue without userRecord - will fall back to other methods
+      }
     }
 
     if (!userRecord) {
@@ -249,12 +254,17 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
 
     // Fallback: Try to get token from next-auth JWT (for compatibility)
     if (!userRecord) {
-      const token = await getToken({ req: req as any, secret: ENV.AUTH_SECRET });
-      if (token) {
-        decodedToken = token;
-        userRecord = await prisma.user.findUnique({
-          where: { id: token.id as string },
-        });
+      try {
+        const token = await getToken({ req: req as any, secret: ENV.AUTH_SECRET });
+        if (token) {
+          decodedToken = token;
+          userRecord = await prisma.user.findUnique({
+            where: { id: token.id as string },
+          });
+        }
+      } catch (nextAuthError) {
+        console.error("NextAuth token retrieval failed:", nextAuthError);
+        // Continue to next fallback
       }
     }
 
@@ -262,9 +272,14 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
     if (!userRecord && authHeader && authHeader.startsWith('Bearer ')) {
       const userId = authHeader.substring(7); // Remove 'Bearer '
       if (userId && userId.length < 50) { // Assuming userId is short, JWT is long
-        userRecord = await prisma.user.findUnique({
-          where: { id: userId },
-        });
+        try {
+          userRecord = await prisma.user.findUnique({
+            where: { id: userId },
+          });
+        } catch (legacyError) {
+          console.error("Legacy user lookup failed:", legacyError);
+          // Continue without userRecord
+        }
       }
     }
 
