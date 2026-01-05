@@ -154,31 +154,34 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
           decodedToken = verifyJWT(jwtToken) as any;
           console.log("Decoded token:", decodedToken);
           if (decodedToken && (decodedToken.type === "login" || decodedToken.type === "verify")) {
-            if (decodedToken.type === "verify" && decodedToken.userphone) {
-              console.log("Upserting user for verify type:", decodedToken.userphone);
-              // For verify type, directly upsert by mobile_no to handle db sync issues
-              userRecord = await prisma.user.upsert({
-                where: { mobile_no: decodedToken.userphone },
-                update: {},
-                create: { mobile_no: decodedToken.userphone },
-              });
-              console.log("Upserted user:", userRecord);
-            } else if (decodedToken.id) {
+            // First, try to find by id if present
+            if (decodedToken.id) {
               console.log("Finding user by id:", decodedToken.id);
-              // For login type, try id first
               userRecord = await prisma.user.findUnique({
                 where: { id: decodedToken.id },
               });
               console.log("Found user by id:", userRecord);
             }
 
+            // If not found and userphone present, try mobile_no
             if (!userRecord && decodedToken.userphone) {
-              console.log("Fallback: finding user by mobile_no:", decodedToken.userphone);
-              // Fallback to mobile_no for login type
-              userRecord = await prisma.user.findUnique({
-                where: { mobile_no: decodedToken.userphone },
-              });
-              console.log("Found user by mobile_no:", userRecord);
+              if (decodedToken.type === "verify") {
+                console.log("Upserting user for verify type:", decodedToken.userphone);
+                // For verify type, upsert by mobile_no to handle db sync issues
+                userRecord = await prisma.user.upsert({
+                  where: { mobile_no: decodedToken.userphone },
+                  update: {},
+                  create: { mobile_no: decodedToken.userphone },
+                });
+                console.log("Upserted user:", userRecord);
+              } else {
+                console.log("Fallback: finding user by mobile_no:", decodedToken.userphone);
+                // For login type, find by mobile_no
+                userRecord = await prisma.user.findUnique({
+                  where: { mobile_no: decodedToken.userphone },
+                });
+                console.log("Found user by mobile_no:", userRecord);
+              }
             }
           } else {
             console.log("Token type not login or verify:", decodedToken?.type);

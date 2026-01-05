@@ -73,7 +73,7 @@ const whitelist = ENV.FRONTENDURL
   : [];
 
 const corsOptions = {
-  origin: (origin, callback) => {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     if (!origin) return callback(null, true);
 
     if (whitelist.includes(origin)) {
