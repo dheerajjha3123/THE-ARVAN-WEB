@@ -1,7 +1,7 @@
 "use server"
 import { CredentialsSignin } from "next-auth";
 import { LoginSchema } from "@/types/types";
-import { signIn } from "@/auth";
+import { signIn } from "next-auth/react";
 import z from "zod"
 export async function loginFunction(data: z.infer<typeof LoginSchema>) {
   try {

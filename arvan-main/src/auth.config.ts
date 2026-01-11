@@ -11,7 +11,7 @@ export default {
       authorize: async (credentials) => {
         try {
           const token = credentials?.token;
-          if (!token) return null;
+          if (!token || typeof token !== 'string') return null;
 
           const decoded: any = jwt.verify(
             token,
