@@ -145,27 +145,28 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
     let userRecord = null;
     let decodedToken = null;
 
-    // PRIMARY: Try to get user from NextAuth session token (this is what frontend sends)
+    // PRIMARY: Try to decode NextAuth JWT token directly (JWT strategy doesn't use database sessions)
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      const sessionToken = authHeader.substring(7);
-      if (sessionToken && sessionToken.trim() !== '') {
+      const jwtToken = authHeader.substring(7);
+      if (jwtToken && jwtToken.trim() !== '') {
         try {
-          console.log("Looking up session token:", sessionToken.substring(0, 10) + "...");
-          // Look up the session in the database
-          const session = await prisma.session.findUnique({
-            where: { sessionToken },
-            include: { user: true },
-          });
-          if (session && session.user && new Date(session.expires) > new Date()) {
-            userRecord = session.user;
-            decodedToken = { id: session.user.id, role: session.user.role };
-            console.log("Found user from session token:", { id: userRecord.id, role: userRecord.role });
+          console.log("Decoding NextAuth JWT token:", jwtToken.substring(0, 10) + "...");
+          // Decode the JWT directly using the same secret as NextAuth
+          const decoded = jwt.verify(jwtToken, ENV.NEXTAUTH_SECRET) as any;
+          console.log("Decoded NextAuth JWT:", { id: decoded.id, phone: decoded.phone, role: decoded.role });
+
+          if (decoded && decoded.id) {
+            decodedToken = decoded;
+            userRecord = await prisma.user.findUnique({
+              where: { id: decoded.id },
+            });
+            console.log("User found from NextAuth token:", userRecord ? { id: userRecord.id, role: userRecord.role } : null);
           } else {
-            console.log("Session not found or expired");
+            console.log("NextAuth token missing id field");
           }
-        } catch (sessionError) {
-          console.error("Session lookup failed:", sessionError);
+        } catch (jwtError) {
+          console.error("NextAuth JWT verification failed:", jwtError);
           // Continue to fallback
         }
       }
