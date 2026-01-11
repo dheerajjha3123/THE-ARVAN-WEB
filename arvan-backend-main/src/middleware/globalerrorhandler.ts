@@ -21,7 +21,7 @@ const verifyJWT = (token: string) => {
   if (!decoded) throw new Error('Invalid token');
   const now = Math.floor(Date.now() / 1000);
   const clockTimestamp = Math.max(now, decoded.iat);
-  return jwt.verify(token, ENV.AUTH_SECRET, { clockTolerance: 300, clockTimestamp });
+  return jwt.verify(token, ENV.NEXTAUTH_SECRET, { clockTolerance: 300, clockTimestamp });
 };
 
 const cleanMessage = (message: string) => message.replace(/(\r\n|\r|\n)/g, " ");
@@ -256,7 +256,7 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
     // Fallback: Try to get token from next-auth JWT (for compatibility)
     if (!userRecord) {
       try {
-        const token = await getToken({ req: req as any, secret: ENV.AUTH_SECRET });
+        const token = await getToken({ req: req as any, secret: ENV.NEXTAUTH_SECRET });
         if (token) {
           decodedToken = token;
           userRecord = await prisma.user.findUnique({

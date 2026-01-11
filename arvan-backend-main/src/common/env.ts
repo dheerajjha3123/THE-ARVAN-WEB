@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 // Define the expected environment variables and their types.
 const envSchema = z.object({
-  NODE_ENV: z.enum(Object.values(NodeEnvs) as [string, ...string[]]), 
+  NODE_ENV: z.enum(Object.values(NodeEnvs) as [string, ...string[]]),
   PORT: z.coerce.number(),
   DATABASE_URL: z.string().url(),
   CLOUDINARY_CLOUD_NAME: z.string(),
@@ -15,6 +15,7 @@ const envSchema = z.object({
   CLOUDINARY_API_SECRET: z.string(),
   FRONTENDURL: z.string().url(),
   AUTH_SECRET: z.string(),
+  NEXTAUTH_SECRET: z.string(),
   WHATSAPP_API_TOKEN: z.string(),
   WHATSAPP_MOBILE: z.string(),
   WHATSAPP_MOBILE_ID: z.string(),
