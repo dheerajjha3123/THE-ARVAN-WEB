@@ -145,14 +145,39 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
     let userRecord = null;
     let decodedToken = null;
 
-    // First, try to get user from Authorization header (JWT token)
+    // PRIMARY: Try to get user from NextAuth session token (this is what frontend sends)
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
+      const sessionToken = authHeader.substring(7);
+      if (sessionToken && sessionToken.trim() !== '') {
+        try {
+          console.log("Looking up session token:", sessionToken.substring(0, 10) + "...");
+          // Look up the session in the database
+          const session = await prisma.session.findUnique({
+            where: { sessionToken },
+            include: { user: true },
+          });
+          if (session && session.user && new Date(session.expires) > new Date()) {
+            userRecord = session.user;
+            decodedToken = { id: session.user.id, role: session.user.role };
+            console.log("Found user from session token:", { id: userRecord.id, role: userRecord.role });
+          } else {
+            console.log("Session not found or expired");
+          }
+        } catch (sessionError) {
+          console.error("Session lookup failed:", sessionError);
+          // Continue to fallback
+        }
+      }
+    }
+
+    // Fallback: try to get user from Authorization header (JWT token)
+    if (!userRecord && authHeader && authHeader.startsWith('Bearer ')) {
       const jwtToken = authHeader.substring(7);
       if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
         try {
           decodedToken = verifyJWT(jwtToken) as any;
-          console.log("Decoded token:", decodedToken);
+          console.log("Decoded JWT token:", decodedToken);
           if (decodedToken && (decodedToken.type === "login" || decodedToken.type === "verify")) {
             if (decodedToken.type === "login") {
               // For login type, first try to find by id if present
@@ -253,19 +278,21 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
       }
     }
 
-    // Fallback: Try to get token from next-auth JWT (for compatibility)
+    // PRIMARY: Try to get token from next-auth JWT (this should be the main method now)
     if (!userRecord) {
       try {
         const token = await getToken({ req: req as any, secret: ENV.NEXTAUTH_SECRET });
-        if (token) {
+        if (token && token.id) {
+          console.log("NextAuth token found:", { id: token.id, phone: token.phone });
           decodedToken = token;
           userRecord = await prisma.user.findUnique({
             where: { id: token.id as string },
           });
+          console.log("User found from NextAuth token:", userRecord);
         }
       } catch (nextAuthError) {
         console.error("NextAuth token retrieval failed:", nextAuthError);
-        // Continue to next fallback
+        // Continue to fallback
       }
     }
 
