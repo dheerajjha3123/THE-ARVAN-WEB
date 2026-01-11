@@ -211,7 +211,7 @@ const generateEmailContent = (name: string, email: string, phone: string, messag
             <strong>The Arvan</strong> - Your Fashion Destination
           </p>
           <p style="margin: 5px 0 0 0; font-size: 12px;">
-            © 2025 The Arvan. All rights reserved.
+            © 2026 The Arvan. All rights reserved.
           </p>
         </div>
       </div>

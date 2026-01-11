@@ -186,7 +186,7 @@ export default function ProductPage() {
       <Navigation />
 
       {/* Hero */}
-      <section className="h-[60vh] lg:h-[40vh] xl:h-[80vh] relative flex items-center justify-center">
+      {/* <section className="h-[60vh] lg:h-[40vh] xl:h-[80vh] relative flex items-center justify-center">
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 md:w-72 md:h-72 lg:w-96 lg:h-96 rounded-full bg-gray-200/40 blur-3xl"
           style={{ boxShadow: "0 0 80px 120px rgba(255, 255, 255, 0.2)" }} />
         <div className="w-full relative h-full flex justify-center items-center p-2">
@@ -198,7 +198,7 @@ export default function ProductPage() {
             <span className="text-4xl inline-block">INTO</span>STYLE.
           </h1>
         </div>
-      </section>
+      </section> */}
 
       {/* Product Grid */}
       <section className="w-full pb-10">

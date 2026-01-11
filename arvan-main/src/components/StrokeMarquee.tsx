@@ -11,7 +11,7 @@ interface StrokeMarqueeProps {
 
 const StrokeMarquee: React.FC<StrokeMarqueeProps> = ({
   direction = "left",
-  text = "STYLISH / COMFORT / AFFORDABLE /&nbsp;",
+  text = "",
   StrokeColor = "1.5px #fff",
 }) => {
   const marqueeRef = useRef<HTMLDivElement>(null);

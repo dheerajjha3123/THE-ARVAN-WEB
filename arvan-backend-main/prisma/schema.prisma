@@ -169,8 +169,8 @@ model Account {
 
 model Order {
   id          String           @id @default(cuid())
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String
+  user        User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId      String?
   items       OrderItem[] // Join table for order items
   total       Float
   status      OrderStatus
@@ -185,8 +185,8 @@ model Order {
   returnedAt   DateTime?
   returnReason String?
   returnAdditionalInfo String?
-  addressId   String
-  address     Address          @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  addressId   String?
+  address     Address?          @relation(fields: [addressId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

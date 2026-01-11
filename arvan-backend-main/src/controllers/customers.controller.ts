@@ -320,6 +320,7 @@ const getOtpByJwt = async (
 
   await sendOtp(getOtp, data.userphone);
 
+  
   // Set token expiry longer for forgetpassword type
   const tokenExpiry = data.type === "forgetpassword" ? "1h" : "15m";
 
@@ -358,38 +359,112 @@ function verifyToken(token: string) {
 }
 
 
+// const verfy_otp = async (req: Request, res: Response, next: NextFunction) => {
+//   console.log(req.body)
+//   const parseddata = getOtpSchema.safeParse(req.body);
+
+//   if (!parseddata.success) {
+//     throw new ValidationErr(parseddata.error.errors);
+//   }
+
+//   const { otp, jwt } = parseddata.data;
+//   console.log(jwt,otp);
+
+//   const verifyJwt: any = verifyToken(jwt)
+//   console.log(verifyJwt);
+
+
+//   if (!verifyJwt) {
+//     throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Invalid JWT");
+//   }
+
+
+//   const findOtp = await prisma.otp.findFirst({
+//     where: {
+//      userphone:verifyJwt.userphone,
+//       otp: otp,
+//       jwt:jwt
+//     },
+//   });
+//   if (!findOtp ) {
+//     throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Invalid OTP");
+//   }
+
+//   // Upsert user to ensure creation or update
+//   const user = await prisma.user.upsert({
+//     where: { mobile_no: findOtp.userphone },
+//     update: {
+//       isPhoneNoVerified: true,
+//       phoneNoVerified: new Date(),
+//     },
+//     create: {
+//       mobile_no: findOtp.userphone,
+//       isPhoneNoVerified: true,
+//       phoneNoVerified: new Date(),
+//     },
+//   });
+
+//   await prisma.otp.delete({
+//     where: {
+//       otp: findOtp.otp,
+//     },
+//   });
+
+//   // Generate login token
+//   // const loginToken = generateToken({
+//   //   id: user.id,
+//   //   // phone: user.mobile_no,
+//   //   userphone: user.mobile_no,
+//   //   mobile_no: user.mobile_no,
+//   //   role: user.role,
+//   //   type: "login",
+//   // });
+
+//   // ✅ LOGIN TOKEN – ONLY AFTER OTP VERIFIED
+// const loginToken = jwt.sign(
+//   {
+//     id: user.id,
+//     userphone: user.mobile_no,
+//     type: "login", // 🔒 ONLY LOGIN TOKEN CAN ACCESS APIs
+//   },
+//   ENV.AUTH_SECRET,
+//   { expiresIn: "7d" }
+// );
+
+//   const message = verifyJwt.type === "verify" ? "mobile verified successfully" : "OTP verified successfully";
+
+//   res
+//     .status(HttpStatusCodes.OK)
+//     .json({ success: true, message, jwt: loginToken });
+// };
+
 const verfy_otp = async (req: Request, res: Response, next: NextFunction) => {
-  console.log(req.body)
   const parseddata = getOtpSchema.safeParse(req.body);
 
   if (!parseddata.success) {
     throw new ValidationErr(parseddata.error.errors);
   }
 
-  const { otp, jwt } = parseddata.data;
-  console.log(jwt,otp);
+  const { otp, jwt: otpJwt } = parseddata.data;
 
-  const verifyJwt: any = verifyToken(jwt)
-  console.log(verifyJwt);
-
-
+  const verifyJwt: any = verifyToken(otpJwt);
   if (!verifyJwt) {
     throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Invalid JWT");
   }
 
-
   const findOtp = await prisma.otp.findFirst({
     where: {
-     userphone:verifyJwt.userphone,
-      otp: otp,
-      jwt:jwt
+      userphone: verifyJwt.userphone,
+      otp,
+      jwt: otpJwt,
     },
   });
-  if (!findOtp ) {
+
+  if (!findOtp) {
     throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Invalid OTP");
   }
 
-  // Upsert user to ensure creation or update
+  // ✅ CREATE OR UPDATE USER (NEW USER WORKS)
   const user = await prisma.user.upsert({
     where: { mobile_no: findOtp.userphone },
     update: {
@@ -403,27 +478,27 @@ const verfy_otp = async (req: Request, res: Response, next: NextFunction) => {
     },
   });
 
+  // ❌ DELETE OTP AFTER USE
   await prisma.otp.delete({
-    where: {
-      otp: findOtp.otp,
+    where: { userphone: findOtp.userphone },
+  });
+
+  // ✅ LOGIN TOKEN (FINAL AUTH TOKEN)
+  const loginToken = jwt.sign(
+    {
+      id: user.id,
+      userphone: user.mobile_no,
+      type: "login",
     },
+    ENV.AUTH_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  res.status(HttpStatusCodes.OK).json({
+    success: true,
+    message: "OTP verified successfully",
+    jwt: loginToken,
   });
-
-  // Generate login token
-  const loginToken = generateToken({
-    id: user.id,
-    // phone: user.mobile_no,
-    userphone: user.mobile_no,
-    mobile_no: user.mobile_no,
-    role: user.role,
-    type: "login",
-  });
-
-  const message = verifyJwt.type === "verify" ? "mobile verified successfully" : "OTP verified successfully";
-
-  res
-    .status(HttpStatusCodes.OK)
-    .json({ success: true, message, jwt: loginToken });
 };
 
 const forgotPassword = async (

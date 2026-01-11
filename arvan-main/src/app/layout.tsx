@@ -11,7 +11,7 @@ import Providers from "./providers";
 import RouteChangeTracker from "@/components/RouteChangeTracker";
 import { Suspense } from "react";
 export const metadata: Metadata = {
-  title: "The Arvan",
+  title: "Arvan - Official Online Store",
   description:
     "Our Top Selling Products · LOOK WHITE · LIFE IS GOOD · A4 WHITE · A4 BLACK · FANCY · LOOK (SKY BLUE ) · JUNGLE WALKER · RED DRAGON.",
   metadataBase: process.env.NEXT_PUBLIC_FRONTEND_URL ? new URL(process.env.NEXT_PUBLIC_FRONTEND_URL) : undefined,

@@ -54,6 +54,7 @@ const { cart } = useCart();
 
     const orderData = {
       order_id: orderId || cuid(), // Ensure unique order ID
+      user_id: session?.user?.id, // Add user_id for address lookup
       order_date: new Date().toISOString().slice(0, 10),
       pickup_location: "Home",
       billing_customer_name: selectedAddr.name.split(" ")[0] || "Guest",
@@ -66,7 +67,7 @@ const { cart } = useCart();
       billing_email: session?.user?.email || "test@test.com",
       billing_phone: session?.user?.mobile_no
         ? session.user.mobile_no.slice(-10)
-        : "0000000000",
+        : null,
       shipping_is_billing: true,
       order_items: cart.map((item) => ({
         name: item.name,

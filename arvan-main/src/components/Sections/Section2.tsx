@@ -10,12 +10,12 @@ const Section2 = () => {
       {/* Right to left */}
       <StrokeMarquee
         direction="left"
-        text="STYLISH / COMFORT / AFFORDABLE /&nbsp;"
+        text=""
       />
       {/* Left to Right */}
       <StrokeMarquee
         direction="right"
-        text="STYLISH / COMFORT / AFFORDABLE /&nbsp;"
+        text=""
         StrokeColor="2px #6FD351"
       />
 

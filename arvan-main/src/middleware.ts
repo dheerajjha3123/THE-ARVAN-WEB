@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import authConfig from "./auth.config";
-import NextAuth from "next-auth";
+import { auth } from "./auth";
 
 const publicRoutes = ["/", "/contact", "/product", "/about", "/shop","/privacy-policy"];
 const authRoutes = [
@@ -12,8 +11,6 @@ const authRoutes = [
   "/new-password",
   "/forgot-password",
 ];
-
-const { auth } = NextAuth(authConfig);
 
 export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

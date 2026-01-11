@@ -675,9 +675,9 @@ const ProductDetails: React.FC<{ productId: string }> = ({ productId }) => {
                   </div>
                 </div>
                 <div className="mt-10 border-t border-white pt-4">
-                  <h3 className="text-2xl mt-5 sm:text-3xl font-montserrat lg:text-4xl font-bold">
+                  {/* <h3 className="text-2xl mt-5 sm:text-3xl font-montserrat lg:text-4xl font-bold">
                     Mandatory Product Information
-                  </h3>
+                  </h3> */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 text-base lg:text-lg">
                     <p className="text-[#b3b3b3]">Manufacturer</p>
                     <p className="text-white uppercase text-sm ">
