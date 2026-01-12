@@ -127,7 +127,6 @@ export const authenticateJWT: RequestHandler = async (
 ): Promise<any> => {
   try {
     // Allow skipping auth check on OTP-related endpoints
-
     const publicAuthRoutes = [
      "/otp",
      "/verify-otp",
@@ -135,154 +134,81 @@ export const authenticateJWT: RequestHandler = async (
      "/reset-password",
    ];
 
-if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
-  return next();
-}
-    // if (req.path.includes('/otp') || req.path.includes('/verify-otp') || req.path.includes('/reset-password') || req.path.includes('/resend-otp')) {
-    //   return next();
-    // }
+    if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
+      return next();
+    }
 
     let userRecord = null;
     let decodedToken = null;
 
-    // PRIMARY: Try to get user from Authorization header (JWT token)
+    // PRIMARY: Try NextAuth session token from Authorization header
     const authHeader = req.headers.authorization;
-    if (!userRecord && authHeader && authHeader.startsWith('Bearer ')) {
-      const jwtToken = authHeader.substring(7).trim();
-      console.log("Raw JWT token from header:", jwtToken.substring(0, 20) + "...");
-      if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const sessionToken = authHeader.substring(7).trim();
+
+      // Check if it's a NextAuth session token (not JWT)
+      if (sessionToken && sessionToken.length > 50 && !isValidJWT(sessionToken)) {
         try {
-          decodedToken = verifyJWT(jwtToken) as any;
-          console.log("Decoded JWT token:", decodedToken);
-          if (decodedToken && (decodedToken.type === "login" || decodedToken.type === "verify")) {
-            if (decodedToken.type === "login") {
-              // For login type, first try to find by id if present
-              if (decodedToken.id) {
-                console.log("Finding user by id:", decodedToken.id);
-                userRecord = await prisma.user.findUnique({
-                  where: { id: decodedToken.id },
-                });
-                console.log("Found user by id:", userRecord);
-              }
-
-              // If not found and userphone present, try mobile_no
-              if (!userRecord && decodedToken.userphone) {
-                console.log("Fallback: finding user by mobile_no:", decodedToken.userphone);
-                userRecord = await prisma.user.findUnique({
-                  where: { mobile_no: decodedToken.userphone },
-                });
-                console.log("Found user by mobile_no:", userRecord);
-              }
-            } else if (decodedToken.type === "verify") {
-              // For verify type, directly upsert by mobile_no since user may not exist yet
-              if (decodedToken.userphone) {
-                console.log("Upserting user for verify type:", decodedToken.userphone);
-                userRecord = await prisma.user.upsert({
-                  where: { mobile_no: decodedToken.userphone },
-                  update: {},
-                  create: { mobile_no: decodedToken.userphone },
-                });
-                console.log("Upserted user:", userRecord);
-              }
-            }
-          } else {
-            console.log("Token type not login or verify:", decodedToken?.type);
-          }
-        } catch (jwtError) {
-          console.error("JWT verification failed:", jwtError);
-          // Continue to fallback
-        }
-      }
-    }
-
-    // For verify type, ensure user exists (handles db sync issues)
-    if (!userRecord && decodedToken && decodedToken.type === "verify" && decodedToken.userphone) {
-      try {
-        userRecord = await prisma.user.upsert({
-          where: { mobile_no: decodedToken.userphone },
-          update: {},
-          create: { mobile_no: decodedToken.userphone },
-        });
-      } catch (dbError) {
-        console.error("Database error in final upsert for verify type:", dbError);
-        // Continue without userRecord - will fall back to other methods
-      }
-    }
-
-    if (!userRecord) {
-      // Fallback: try to get session from Authorization header (NextAuth session token)
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const sessionToken = authHeader.substring(7); // Remove 'Bearer '
-        try {
-          // Look up the session in the database
           const session = await prisma.session.findUnique({
             where: { sessionToken },
             include: { user: true },
           });
+
           if (session && session.user && new Date(session.expires) > new Date()) {
             userRecord = session.user;
             decodedToken = { id: session.user.id, role: session.user.role };
+            console.log("✅ Authenticated via NextAuth session token");
           }
         } catch (sessionError) {
           console.error("Session lookup failed:", sessionError);
-          // Continue to fallback
         }
       }
     }
 
-    // Fallback: Try to decode JWT from Authorization header (if it's a JWT)
-    if (!userRecord && authHeader && authHeader.startsWith('Bearer ')) {
-      const jwtToken = authHeader.substring(7); // Remove 'Bearer '
-      if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
-        try {
-          decodedToken = verifyJWT(jwtToken) as any;
-          if (decodedToken && decodedToken.id) {
-            userRecord = await prisma.user.findUnique({
-              where: { id: decodedToken.id },
-            });
-            // Fallback: if not found by id, try by mobile_no (for production db sync issues)
-            if (!userRecord && decodedToken.mobile_no) {
-              userRecord = await prisma.user.findUnique({
-                where: { mobile_no: decodedToken.mobile_no },
-              });
-            }
-          }
-        } catch (jwtError) {
-          console.error("JWT verification failed:", jwtError);
-          // Continue to fallback
-        }
-      }
-    }
-
-    // PRIMARY: Try to get token from next-auth JWT (this should be the main method now)
+    // SECONDARY: Try NextAuth JWT token
     if (!userRecord) {
       try {
         const token = await getToken({ req: req as any, secret: ENV.NEXTAUTH_SECRET });
         if (token && token.id) {
-          console.log("NextAuth token found:", { id: token.id, phone: token.phone });
           decodedToken = token;
           userRecord = await prisma.user.findUnique({
             where: { id: token.id as string },
           });
-          console.log("User found from NextAuth token:", userRecord);
+          console.log("✅ Authenticated via NextAuth JWT token");
         }
       } catch (nextAuthError) {
         console.error("NextAuth token retrieval failed:", nextAuthError);
-        // Continue to fallback
       }
     }
 
-    // Final fallback: check if Authorization header has user ID (legacy)
+    // TERTIARY: Try custom JWT tokens (for OTP login)
     if (!userRecord && authHeader && authHeader.startsWith('Bearer ')) {
-      const userId = authHeader.substring(7); // Remove 'Bearer '
-      if (userId && userId.length < 50) { // Assuming userId is short, JWT is long
+      const jwtToken = authHeader.substring(7).trim();
+
+      if (jwtToken && isValidJWT(jwtToken)) {
         try {
-          userRecord = await prisma.user.findUnique({
-            where: { id: userId },
-          });
-        } catch (legacyError) {
-          console.error("Legacy user lookup failed:", legacyError);
-          // Continue without userRecord
+          decodedToken = verifyJWT(jwtToken) as any;
+
+          if (decodedToken && decodedToken.type === "login") {
+            // Find user by ID first, then by phone
+            if (decodedToken.id) {
+              userRecord = await prisma.user.findUnique({
+                where: { id: decodedToken.id },
+              });
+            }
+
+            if (!userRecord && decodedToken.userphone) {
+              userRecord = await prisma.user.findUnique({
+                where: { mobile_no: decodedToken.userphone },
+              });
+            }
+
+            if (userRecord) {
+              console.log("✅ Authenticated via custom JWT token");
+            }
+          }
+        } catch (jwtError) {
+          console.error("JWT verification failed:", jwtError);
         }
       }
     }
@@ -293,7 +219,7 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
 
     req.user = userRecord;
 
-    // Override role with token role if available (for admin designation via ADMIN_NUMBERS)
+    // Override role with token role if available
     if (decodedToken && decodedToken.role) {
       req.user.role = decodedToken.role;
     }
@@ -301,20 +227,6 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
     next();
   } catch (error: unknown) {
     console.error("Failed to authenticate", error);
-    // Instead of throwing an error, just skip authentication for OTP endpoints
-    if (
-      typeof req !== "undefined" &&
-      'path' in req &&
-      typeof req.path === 'string' &&
-      (
-        (req.path as string).includes('/otp') ||
-        (req.path as string).includes('/verify-otp') ||
-        (req.path as string).includes('/reset-password') ||
-        (req.path as string).includes('/resend-otp')
-      )
-    ) {
-      return next();
-    }
     throw new RouteError(401, "Unauthorized");
   }
 };
