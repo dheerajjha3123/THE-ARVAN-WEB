@@ -182,19 +182,23 @@ export const authenticateJWT: RequestHandler = async (
       console.log("❌ No Bearer token in Authorization header");
     }
 
-    // SECONDARY: Try NextAuth JWT token
-    if (!userRecord) {
-      try {
-        const token = await getToken({ req: req as any, secret: ENV.NEXTAUTH_SECRET });
-        if (token && token.id) {
-          decodedToken = token;
-          userRecord = await prisma.user.findUnique({
-            where: { id: token.id as string },
-          });
-          console.log("✅ Authenticated via NextAuth JWT token");
+    // SECONDARY: Try NextAuth JWT token from Authorization header
+    if (!userRecord && authHeader && authHeader.startsWith('Bearer ')) {
+      const jwtToken = authHeader.substring(7).trim();
+
+      if (jwtToken && isValidJWT(jwtToken)) {
+        try {
+          const decoded = jwt.decode(jwtToken) as any;
+          if (decoded && decoded.id) {
+            decodedToken = decoded;
+            userRecord = await prisma.user.findUnique({
+              where: { id: decoded.id },
+            });
+            console.log("✅ Authenticated via NextAuth JWT token from header");
+          }
+        } catch (jwtError) {
+          console.error("JWT decode failed:", jwtError);
         }
-      } catch (nextAuthError) {
-        console.error("NextAuth token retrieval failed:", nextAuthError);
       }
     }
 
