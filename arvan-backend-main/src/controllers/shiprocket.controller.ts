@@ -474,7 +474,7 @@ const createShiprocketOrder: RequestHandler = async (req, res, next) => {
 
     const nameParts = fullName.trim().split(" ");
     const billingCustomerName = nameParts[0];
-    const billingLastName = nameParts.slice(1).join(" ") || "NA";
+    const billingLastName = nameParts.slice(1).join(" ") || "";
 
     // ====================
     // ✅ FINAL SHIPROCKET PAYLOAD

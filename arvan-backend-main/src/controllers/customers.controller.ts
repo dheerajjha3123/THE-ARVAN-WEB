@@ -490,7 +490,7 @@ const verfy_otp = async (req: Request, res: Response, next: NextFunction) => {
       userphone: user.mobile_no,
       type: "login",
     },
-    ENV.AUTH_SECRET,
+    ENV.NEXTAUTH_SECRET,
     { expiresIn: "7d" }
   );
 

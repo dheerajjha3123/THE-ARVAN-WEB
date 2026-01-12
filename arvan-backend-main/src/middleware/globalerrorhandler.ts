@@ -145,36 +145,11 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
     let userRecord = null;
     let decodedToken = null;
 
-    // PRIMARY: Try to decode NextAuth JWT token directly (JWT strategy doesn't use database sessions)
+    // PRIMARY: Try to get user from Authorization header (JWT token)
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const jwtToken = authHeader.substring(7);
-      if (jwtToken && jwtToken.trim() !== '') {
-        try {
-          console.log("Decoding NextAuth JWT token:", jwtToken.substring(0, 10) + "...");
-          // Decode the JWT directly using the same secret as NextAuth
-          const decoded = jwt.verify(jwtToken, ENV.NEXTAUTH_SECRET) as any;
-          console.log("Decoded NextAuth JWT:", { id: decoded.id, phone: decoded.phone, role: decoded.role });
-
-          if (decoded && decoded.id) {
-            decodedToken = decoded;
-            userRecord = await prisma.user.findUnique({
-              where: { id: decoded.id },
-            });
-            console.log("User found from NextAuth token:", userRecord ? { id: userRecord.id, role: userRecord.role } : null);
-          } else {
-            console.log("NextAuth token missing id field");
-          }
-        } catch (jwtError) {
-          console.error("NextAuth JWT verification failed:", jwtError);
-          // Continue to fallback
-        }
-      }
-    }
-
-    // Fallback: try to get user from Authorization header (JWT token)
     if (!userRecord && authHeader && authHeader.startsWith('Bearer ')) {
-      const jwtToken = authHeader.substring(7);
+      const jwtToken = authHeader.substring(7).trim();
+      console.log("Raw JWT token from header:", jwtToken.substring(0, 20) + "...");
       if (jwtToken && jwtToken.trim() !== '' && isValidJWT(jwtToken.trim())) {
         try {
           decodedToken = verifyJWT(jwtToken) as any;
