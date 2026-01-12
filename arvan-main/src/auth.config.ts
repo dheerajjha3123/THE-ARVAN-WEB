@@ -35,7 +35,7 @@ export default {
   ],
 
   session: {
-    strategy: "jwt",
+    strategy: "database",
   },
 
   secret: process.env.NEXTAUTH_SECRET,
@@ -50,12 +50,14 @@ export default {
       return token;
     },
 
-    async session({ session, token }: any) {
-      session.user = {
-        id: token.id as string,
-        phone: token.phone as string,
-        role: token.role as string,
-      };
+    async session({ session, user }: any) {
+      if (user) {
+        session.user = {
+          id: user.id,
+          phone: (user as any).phone,
+          role: (user as any).role,
+        };
+      }
       return session;
     },
   },

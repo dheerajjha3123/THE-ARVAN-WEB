@@ -145,24 +145,41 @@ export const authenticateJWT: RequestHandler = async (
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const sessionToken = authHeader.substring(7).trim();
+      console.log("🔍 Checking token:", sessionToken.substring(0, 20) + "...");
+      console.log("🔍 Token length:", sessionToken.length);
+      console.log("🔍 Is JWT?", isValidJWT(sessionToken));
 
       // Check if it's a NextAuth session token (not JWT)
       if (sessionToken && sessionToken.length > 50 && !isValidJWT(sessionToken)) {
         try {
+          console.log("🔍 Looking up session in database...");
           const session = await prisma.session.findUnique({
             where: { sessionToken },
             include: { user: true },
           });
 
+          console.log("🔍 Session found:", !!session);
+          if (session) {
+            console.log("🔍 Session expires:", session.expires);
+            console.log("🔍 Current time:", new Date());
+            console.log("🔍 Is expired?", new Date(session.expires) <= new Date());
+          }
+
           if (session && session.user && new Date(session.expires) > new Date()) {
             userRecord = session.user;
             decodedToken = { id: session.user.id, role: session.user.role };
             console.log("✅ Authenticated via NextAuth session token");
+          } else {
+            console.log("❌ Session invalid or expired");
           }
         } catch (sessionError) {
           console.error("Session lookup failed:", sessionError);
         }
+      } else {
+        console.log("❌ Token is JWT or too short, skipping session lookup");
       }
+    } else {
+      console.log("❌ No Bearer token in Authorization header");
     }
 
     // SECONDARY: Try NextAuth JWT token
