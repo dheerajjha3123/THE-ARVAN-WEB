@@ -346,12 +346,12 @@ function generateToken(payload: object, expiresIn: string | number = 900): strin
     // other options
   };
 
-  return jwt.sign(payload, ENV.AUTH_SECRET, options);
+  return jwt.sign(payload, ENV.NEXTAUTH_SECRET, options);
 }
 function verifyToken(token: string) {
   try {
     // Verify the token using the secret key
-    return jwt.verify(token, ENV.AUTH_SECRET);
+    return jwt.verify(token, ENV.NEXTAUTH_SECRET);
   } catch (err: any) {
     console.error("Token verification failed:", err.message);
     return null;

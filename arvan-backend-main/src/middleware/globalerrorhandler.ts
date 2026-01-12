@@ -323,15 +323,16 @@ if (publicAuthRoutes.some(route => req.originalUrl.includes(route))) {
 export const isAdmin: RequestHandler = (req: ExpressRequest, res: Response, next: NextFunction) => {
   const adminNumbersEnv: string | undefined = (ENV as any).ADMIN_NUMBERS;
   const adminNumbers = adminNumbersEnv ? adminNumbersEnv.split(',').map((s: string) => s.trim()) : [];
-  const userPhone = req.user?.phone || req.user?.userphone || req.user?.mobile_no || "";
+  const userPhone = req.user?.mobile_no || "";
 
   if (adminNumbers.includes(userPhone)) {
     return next();
   }
 
-  // fallback to role check if phone is not listed as admin
-  if (req.user.role === "USER") {
-    throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
+  // Check if user has ADMIN role
+  if (req.user?.role === "ADMIN") {
+    return next();
   }
-  next();
+
+  throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
 };
